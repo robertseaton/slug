@@ -24,8 +24,8 @@
 
 CC = clang
 CFLAGS = -O0 -ggdb -march=native -pipe -Wall -Wextra
-objects = main.o metadata.o parser.o piece.o util.o
-includes = -I. -lssl -lm
+objects = announce.o bitfield.o main.o metadata.o parser.o peer.o piece.o torrent.o url.o util.o
+includes = -I. -lssl -lm -lcurl -levent
 
 all : slug
 slug : $(objects)
