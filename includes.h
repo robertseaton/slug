@@ -1,11 +1,14 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
+#include <netinet/in.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /* start forward declarations */
 struct Piece;
 struct BEncode;
+struct PeerNode;
 /* end forward declarations */
 
 struct Torrent {
@@ -21,11 +24,13 @@ struct Torrent {
      uint64_t uploaded;
      uint64_t downloaded;
      uint64_t left;
+     uint64_t announce_interval;
      uint64_t* global_bitfield;
      int8_t private;
      int8_t compact;
      int8_t* have_bitfield;
      struct Piece* pieces;
+     struct PeerNode* peer_list;
 };
 
 struct Piece {
@@ -34,11 +39,7 @@ struct Piece {
      uint64_t amount_requested;
      uint64_t rarity;
      unsigned char sha1[20];
-     enum {
-          Need, 
-          Have,
-          Downloading
-     } state;
+     int8_t state;
 };
 
 struct Peer {
@@ -50,7 +51,15 @@ struct Peer {
      uint64_t amount_downloaded;
      time_t started;
      int8_t state;
-}; 
+     unsigned char* message;
+     unsigned char* bitfield;
+};
+
+/* peers linked list */
+struct PeerNode {
+     struct Peer* cargo;
+     struct PeerNode* next;
+};
 
 typedef enum BType {
      BString,
@@ -81,12 +90,17 @@ struct BEncode {
 };
 
 #define PORT 6784
+#define DEFAULT_ANNOUNCE 1800
 #define STARTED 0
 #define STOPPED 1
 #define COMPLETED 2
-
+/* state identified for peer */
+#define NOT_CONNECTED (1 << 0)
+#define CHOKED        (1 << 1)
+/* state identifiers for piece */
+#define NEED          (1 << 0)
 /* from bitfield.c */
-char* init_bitfield(uint64_t, char*, uint64_t);
+char* init_bitfield(uint64_t, char*, uint64_t*);
 uint64_t* init_global_bitfield(uint64_t);
 char* init_have_bitfield(uint64_t);
 void update_bitfield(uint64_t, char*, uint64_t*, char*);
@@ -98,9 +112,20 @@ struct Torrent* init_torrent(FILE*, double, double);
 /* from parser.c */
 struct BEncode* parseBEncode(char*, int64_t*);
 
+/* from peer.c */
+struct Peer* init_peer(struct Torrent*, char*, char*);
+
 /* from piece.c */
 void init_piece(struct Piece, uint64_t);
 
+/* from torrent.c */
+void start_torrent(char*, double, double);
+
+/* from url.c */
+char* construct_url(struct Torrent*, int8_t);
+
 /* from util.c */
 void error(char*);
+struct BEncode* find_value(char* key, struct BDictNode* d);
+void freeBEncode(struct BEncode*);
 #endif
