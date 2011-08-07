@@ -6,22 +6,6 @@
 
 #include "includes.h"
 
-/* takes a key and a BEncoded dictionary node and searches for
- * the corresponding value
- * * */
-struct BEncode* find_value (char* key, struct BDictNode* d)
-{
-     struct BDictNode* pt = d;
-     struct BDictNode* next = d;
-     
-     while (next) {
-          if (strncmp(pt->key, key, strlen(key)) == 0)
-               return pt->value;
-          pt = next;
-     }
-     return NULL;
-}
-
 /* takes a metadata BEncoded dictionary and returns the url */ 
 char* get_url (struct BDictNode* b)
 {
@@ -53,10 +37,10 @@ uint64_t get_piece_length (struct BDictNode* b)
 }
 
 /* takes the metadata as a string and returns the pieces */
-struct Piece* get_pieces (char* data)
+void get_pieces (struct Piece* pieces, uint64_t num_pieces, char* data)
 {
      char* j;
-     uint64_t num_pieces = 0;
+     num_pieces = 0;
      
 #define PIECE_STR "6:pieces"
      j = strstr(data, PIECE_STR);
@@ -72,7 +56,7 @@ struct Piece* get_pieces (char* data)
 
 #define CHARS_IN_PIECE 20
      num_pieces = num_pieces / CHARS_IN_PIECE;
-     struct Piece* pieces = malloc(sizeof(struct Piece) * num_pieces);
+     pieces = malloc(sizeof(struct Piece) * num_pieces);
      
      uint64_t i;
      for (i = 0; i < num_pieces; ++i) {
@@ -229,11 +213,12 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
 
           if (output_value == NULL || output_value->type != BDict)
                error("Failed to get torrent's metadata.");
-
+          
+          t->announce_interval = DEFAULT_ANNOUNCE;
           t->name = get_name(output_value->cargo.bDict);
           t->length = get_length(output_value->cargo.bDict);
           t->piece_length = get_piece_length(output_value->cargo.bDict);
-          t->pieces = get_pieces(data);
+          get_pieces(t->pieces, t->num_pieces, data);
           t->url = get_url(bEncodedDict->cargo.bDict);
           t->info_hash = get_info_hash(data);
           t->private = is_private(bEncodedDict->cargo.bDict);
@@ -242,8 +227,8 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t->compact = 1;
           t->uploaded = 0;
           t->downloaded = 0;
-          t->global_bitfield = init_global_bitfield(num_pieces);
-          t->have_bitfield = init_have_bitfield(num_pieces);
+          t->global_bitfield = init_global_bitfield(t->num_pieces);
+          t->have_bitfield = init_have_bitfield(t->num_pieces);
           free(data);
           return t;
      } else
