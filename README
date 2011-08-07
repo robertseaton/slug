@@ -13,4 +13,4 @@ Example usages:
 
 All of these things will be possible with Slug and, most importantly, they won't stop the torrents from seeding, even after being renamed. This will be accomplished by embedding Lua as a scripting language inside of Slug and allowing users to write "rule files" to complete tasks. Slug's configuration will be exposed via a default rule file.
 
-Slug, by itself, will not have a GUI but -- once I finished Slug -- I intend to write a user-friendly WebUI that can optionally be used alongside Slug. This will expose actions such as pausing and removing torrents and make torrent management a breeze, even when dealing with thousands of torrents. Ideally, you will be able to think of Slug's webUI as an even better version of Rutorrent.
+Slug, by itself, will not have a GUI but -- once I finish Slug -- I intend to write a user-friendly WebUI that can optionally be used alongside Slug. This will expose actions such as pausing and removing torrents and make torrent management a breeze, even when dealing with thousands of torrents. Ideally, you will be able to think of Slug's webUI as an even better version of Rutorrent.
