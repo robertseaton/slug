@@ -1,3 +1,7 @@
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "includes.h"
 
 char from_hex (char c)
@@ -11,7 +15,7 @@ char to_hex (char h)
      return hex[h & 15];
 }
 
-char encode_url (char* s, char* end)
+char* encode_url (char* s, char* end)
 {
      char* str_pt = s;
      char* buffer = malloc((strlen(s) + 1) * 3);
@@ -40,10 +44,9 @@ char* construct_url (struct Torrent* t, int8_t event)
      char* peer_id = encode_url(t->peer_id, &t->peer_id[19]);
      char* info_hash = encode_url(t->info_hash, &t->info_hash[19]);
      int32_t url_length = strlen(t->url) + strlen("?info_hash=") + strlen(info_hash) + 
-          strlen("&peer_id=") + strlen(peer_id) + strlen("&port=") + strlen(itoa(t->port)) +
-          strlen("&uploaded=") + strlen(itoa(t->uploaded)) + strlen("&downloaded=") +
-          strlen(itoa(t->downloaded)) + strlen("&left=") + strlen(itoa(t->left)) +
-          strlen("&compact=") + strlen(itoa(t->compact)) + strlen("&event=completed") + 1;
+          strlen("&peer_id=") + strlen(peer_id) + strlen("&port=") + strlen("&uploaded=") 
+          + strlen("&downloaded=") + strlen("&left=") + strlen("&compact=") 
+          + strlen("&event=completed") + 100;
      char* url = malloc(url_length);
      
      snprintf(url, url_length,
@@ -60,6 +63,7 @@ char* construct_url (struct Torrent* t, int8_t event)
               peer_id,
               t->port,
               t->uploaded,
+              t->downloaded,
               t->left,
               t->compact);
 

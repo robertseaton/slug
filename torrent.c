@@ -1,3 +1,8 @@
+#include <curl/curl.h>
+#include <event2/event.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "includes.h"
 
 unsigned char* construct_handshake (struct Torrent* t)
