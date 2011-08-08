@@ -28,8 +28,10 @@ objects = announce.o bitfield.o main.o metadata.o parser.o peer.o piece.o torren
 includes = -I. -lssl -lm -lcurl -levent
 
 all : slug
+analyze : 
+	clang --analyze -DDEBUG $(objects:%.o=%.c); rm *.plist
 slug : $(objects)
-	$(CC) $(CFLAGS) -o slug $(objects) $(includes)
+	$(CC) $(CFLAGS) -DDEBUG -o slug $(objects) $(includes)
 
 clean :
 	 rm slug $(objects)
