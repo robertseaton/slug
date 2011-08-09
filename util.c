@@ -19,6 +19,7 @@ struct BEncode* find_value (char* key, struct BDictNode* d)
      struct BDictNode* next = d;
      
      while (next) {
+          next = pt->next;
           if (strncmp(pt->key, key, strlen(key)) == 0)
                return pt->value;
           pt = next;
