@@ -18,7 +18,7 @@ char to_hex (char h)
 char* encode_url (char* s, char* end)
 {
      char* str_pt = s;
-     char* buffer = malloc((strlen(s) + 1) * 3);
+     char* buffer = malloc(strlen(s) * 4 + 1);
      char* buffer_pt = buffer;
 
      while (str_pt <= end) {
@@ -29,7 +29,7 @@ char* encode_url (char* s, char* end)
           else {
                *buffer_pt++ = '%';
                *buffer_pt++ = to_hex(*str_pt >> 4);
-               *buffer_pt = to_hex(*str_pt & 15);
+               *buffer_pt++ = to_hex(*str_pt & 15);
           }
           str_pt++;
      }
@@ -42,7 +42,7 @@ char* encode_url (char* s, char* end)
 char* construct_url (struct Torrent* t, int8_t event)
 {
      char* peer_id = encode_url(t->peer_id, &t->peer_id[19]);
-     char* info_hash = encode_url(t->info_hash, &t->info_hash[19]);
+     char* info_hash = encode_url((char *)t->info_hash, (char *)&t->info_hash[19]);
      int32_t url_length = strlen(t->url) + strlen("?info_hash=") + strlen(info_hash) + 
           strlen("&peer_id=") + strlen(peer_id) + strlen("&port=") + strlen("&uploaded=") 
           + strlen("&downloaded=") + strlen("&left=") + strlen("&compact=") 
