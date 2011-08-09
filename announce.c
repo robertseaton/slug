@@ -16,18 +16,18 @@ int failed (struct BDictNode* b)
      struct BEncode* output_value = find_value("failure reason", b);
      
      if (output_value != NULL)
-          return 0;
+          return 1;
      
-     return -1;
+     return 0;
 }
 
 void pfailure_reason (struct BDictNode* b)
 {
      struct BEncode* output_value = find_value("failure reason", b);
-     fprintf(stderr, "Announce failed: %s.\n", output_value->cargo.bStr);
+     fprintf(stderr, "Announce failed: %s\n", output_value->cargo.bStr);
 }
 
-struct Peer** get_peers (struct Torrent* t, char* data)
+struct PeerNode* get_peers (struct Torrent* t, char* data)
 {
      int64_t i = 0;
      char* j;
@@ -36,7 +36,7 @@ struct Peer** get_peers (struct Torrent* t, char* data)
      j = strstr(data, PEERS_STR);
      j += strlen(PEERS_STR);
      
-     free(parseBEncode(j, &i));
+     freeBEncode(parseBEncode(j, &i));
 
      while (isdigit(*j)) {
           num_peers = num_peers * 10 + ((*j) - '0');
@@ -49,18 +49,21 @@ struct Peer** get_peers (struct Torrent* t, char* data)
      /* possibility of 0 peers 
       * not sure if this works, might need to check earlier 
       * * */
-     if (num_peers)
+     if (!num_peers)
           return NULL;
 
-     struct Peer** list = malloc(sizeof(struct Peer*) * num_peers);
-
+     struct PeerNode* current;
+     current = init_peer_node(init_peer(j, j + 4), NULL);
+     j += 6;
+     struct PeerNode* first = current;
      uint64_t k;
      for (k = 0; k < num_peers; k++) { 
-          list[k] = init_peer(t, j, j + 4);
+          current = init_peer_node(init_peer(j, j + 4), NULL);
+          current = current->next;
           j += 6;
      }
 
-     return list;
+     return first;
 }
 
 uint64_t get_interval (struct BDictNode* b)
@@ -77,7 +80,7 @@ void announce (evutil_socket_t fd, short what, void* arg)
      struct event_base* base = recv_arg->base;
      int32_t length = strlen(t->name) + strlen("/tmp/slug/-announce") + 1;
      char* filepath = malloc(length);
-     char* url = construct_url(t, NULL);
+     char* url = construct_url(t, VOID);
      snprintf(filepath, length, "/tmp/slug/%s-announce", t->name);
      FILE* announce_data = fopen(filepath, "w");
 
@@ -129,7 +132,7 @@ void first_announce (struct Torrent* t, int8_t event, CURL* connection, struct e
      FILE* announce_data = fopen(filepath, "w");
 
      curl_easy_setopt(connection, CURLOPT_URL, url);
-     curl_easy_setopt(connect, CURLOPT_WRITEDATA, announce_data);
+     curl_easy_setopt(connection, CURLOPT_WRITEDATA, announce_data);
      curl_easy_perform(connection);
 
      fclose(announce_data);
