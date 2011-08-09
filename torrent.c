@@ -31,5 +31,5 @@ void start_torrent (char* file, double peer_id, double port)
      unsigned char* handshake = construct_handshake(t);
      CURL* connection = curl_easy_init();
      
-     announce(t, STARTED, connection, base);
+     first_announce(t, STARTED, connection, base);
 }
