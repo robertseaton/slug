@@ -16,7 +16,7 @@ char* get_url (struct BDictNode* b)
      if (output_value == NULL || output_value->type != BString)
           error("Failed to get URL from metadata.");
      else {
-          url = malloc(strlen(output_value->cargo.bStr + 1));
+          url = malloc(strlen(output_value->cargo.bStr) + 1);
           strcpy(url, output_value->cargo.bStr);
      }
 
@@ -29,7 +29,7 @@ uint64_t get_piece_length (struct BDictNode* b)
      char input_key[13] = "piece length";
      struct BEncode* output_value = find_value(input_key, b);
 
-     if (output_value == NULL || output_value->type == BInt)
+     if (output_value == NULL || output_value->type != BInt)
           error("Failed to get piece length from metadata.");
  
           return output_value->cargo.bInt;
@@ -37,29 +37,35 @@ uint64_t get_piece_length (struct BDictNode* b)
 }
 
 /* takes the metadata as a string and returns the pieces */
-void get_pieces (struct Piece* pieces, uint64_t num_pieces, char* data)
+void get_pieces (struct Piece* pieces, uint64_t* num_pieces, char* data)
 {
      char* j;
-     num_pieces = 0;
+     *num_pieces = 0;
      
 #define PIECE_STR "6:pieces"
      j = strstr(data, PIECE_STR);
      if (j == NULL)
           error("Failed to get pieces from metadata");
 
+     j += strlen(PIECE_STR);
      while (isdigit(*j))  {
-          num_pieces = num_pieces * 10 + ((*j) - '0');
+          *num_pieces = *num_pieces * 10 + ((*j) - '0');
           j++;
      }
      /* skip the ':' */
      j++;
 
 #define CHARS_IN_PIECE 20
-     num_pieces = num_pieces / CHARS_IN_PIECE;
-     pieces = malloc(sizeof(struct Piece) * num_pieces);
+     *num_pieces = *num_pieces / CHARS_IN_PIECE;
+
+     /* make sure we don't malloc 0 */
+     if (*num_pieces == 0)
+          error("Parsing metadata returned an invalid number of pieces.");
+
+     pieces = malloc(sizeof(struct Piece) * *num_pieces);
      
      uint64_t i;
-     for (i = 0; i < num_pieces; ++i) {
+     for (i = 0; i < *num_pieces; ++i) {
           
           uint64_t k;
           for (k = 0; k < CHARS_IN_PIECE; ++k) {
@@ -68,8 +74,6 @@ void get_pieces (struct Piece* pieces, uint64_t num_pieces, char* data)
           }
           init_piece(pieces[i], i);
      }
-
-     return pieces;
 }
 
 /* takes a BEncoded metadata dictionary and returns 1 if private, 0 otherwise */
@@ -129,6 +133,10 @@ char* get_path (struct BDictNode* b)
                     i += sizeof(char) * (strlen(next->cargo->cargo.bStr) + 1);
                next = next->next;
           }
+          
+          /* make sure we don't malloc 0 */
+          if (i == 0)
+               error("Parsing metadata returned an invalid value for path length.");
 
           path = malloc(i);
           next = head;
@@ -157,12 +165,13 @@ int is_single_file_torrent (char* data)
 }
 
 /* returns the SHA1 hash of the info dictionary */
-char* get_info_hash (char* data)
+unsigned char* get_info_hash (char* data)
 {
      SHA_CTX sha;
      int64_t i = 0;
      char* j;
-     static char info_hash[20];
+     unsigned char* info_hash;
+     info_hash = malloc(sizeof(unsigned char) * 20);
 
 #define INFO_STR "4:info"
      j = strstr(data, INFO_STR);
@@ -170,9 +179,11 @@ char* get_info_hash (char* data)
      if (j == NULL)
           error("Failed to get info hash from torrent's metadata.");
 
-     parseBEncode(j, &i);
+     j += strlen(INFO_STR);
+
+     freeBEncode(parseBEncode(j, &i));
      SHA1_Init(&sha);
-     SHA1_Update(&sha, j, i);
+     SHA1_Update(&sha, j, (int)i);
      SHA1_Final(info_hash, &sha);
 
      return info_hash;
@@ -205,8 +216,6 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
 
      if (bEncodedDict->type == BDict) {
           t->url = get_url(bEncodedDict->cargo.bDict);
-          t->info_hash = get_info_hash(data);
-          t->private = is_private(bEncodedDict->cargo.bDict);
 
           char input_key[5] = "info";
           struct BEncode* output_value = find_value(input_key, bEncodedDict->cargo.bDict);
@@ -218,19 +227,21 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t->name = get_name(output_value->cargo.bDict);
           t->length = get_length(output_value->cargo.bDict);
           t->piece_length = get_piece_length(output_value->cargo.bDict);
-          get_pieces(t->pieces, t->num_pieces, data);
+          get_pieces(t->pieces, &t->num_pieces, data);
           t->url = get_url(bEncodedDict->cargo.bDict);
-          t->info_hash = get_info_hash(data);
-          t->private = is_private(bEncodedDict->cargo.bDict);
+          t->info_hash = (unsigned char *)get_info_hash(data);
           t->peer_id = set_peer_id(peer_id);
           t->port = port;
           t->compact = 1;
           t->uploaded = 0;
           t->downloaded = 0;
+          t->left = t->num_pieces * t->piece_length;
           t->global_bitfield = init_global_bitfield(t->num_pieces);
           t->have_bitfield = init_have_bitfield(t->num_pieces);
+          freeBEncode(bEncodedDict);
           free(data);
-          return t;
      } else
           error("Failed to parse metadata.");
+     
+     return t;
 }
