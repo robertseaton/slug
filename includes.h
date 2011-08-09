@@ -1,6 +1,8 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
+#include <curl/curl.h>
+#include <event2/event.h>
 #include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,6 +18,7 @@ struct Torrent {
      char* name;
      char* tracker_id;
      char* url;
+     char* have_bitfield;
      unsigned char* info_hash;
      uint64_t length;
      uint64_t piece_length;
@@ -28,7 +31,6 @@ struct Torrent {
      uint64_t* global_bitfield;
      int8_t private;
      int8_t compact;
-     int8_t* have_bitfield;
      struct Piece* pieces;
      struct PeerNode* peer_list;
 };
@@ -53,6 +55,10 @@ struct Peer {
      int8_t state;
      unsigned char* message;
      unsigned char* bitfield;
+#ifdef DEBUG
+     /* human readable ip address */
+     char* dot_ip;
+#endif
 };
 
 /* peers linked list */
@@ -94,16 +100,21 @@ struct BEncode {
 #define STARTED 0
 #define STOPPED 1
 #define COMPLETED 2
+#define VOID 8
 /* state identified for peer */
 #define NOT_CONNECTED (1 << 0)
 #define CHOKED        (1 << 1)
 /* state identifiers for piece */
 #define NEED          (1 << 0)
+
+/* from announce.c */
+void first_announce(struct Torrent*, int8_t, CURL*, struct event_base*);
+
 /* from bitfield.c */
-char* init_bitfield(uint64_t, char*, uint64_t*);
+char* init_bitfield(uint64_t, char*);
 uint64_t* init_global_bitfield(uint64_t);
 char* init_have_bitfield(uint64_t);
-void update_bitfield(uint64_t, char*, uint64_t*, char*);
+void update_bitfield(char*, uint64_t*, char*);
 void update_global_bitfield(uint64_t, char*, uint64_t*);
 
 /* from metadata.c */
@@ -113,7 +124,9 @@ struct Torrent* init_torrent(FILE*, double, double);
 struct BEncode* parseBEncode(char*, int64_t*);
 
 /* from peer.c */
-struct Peer* init_peer(struct Torrent*, char*, char*);
+struct Peer* init_peer(char*, char*);
+struct PeerNode* init_peer_node(struct Peer*, struct PeerNode*);
+void add_peers (struct Torrent*, struct PeerNode*);
 
 /* from piece.c */
 void init_piece(struct Piece, uint64_t);
