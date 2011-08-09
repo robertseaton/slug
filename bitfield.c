@@ -4,7 +4,7 @@
 #include "includes.h"
 
 /* parses a bitfield message into a bitfield data structure */
-char* init_bitfield (uint64_t num_pieces, char* message, uint64_t* global_bitfield)
+char* init_bitfield (uint64_t num_pieces, char* message)
 {
      /* never malloc 0 */
      if (num_pieces == 0)
@@ -55,10 +55,10 @@ char* init_have_bitfield (uint64_t num_pieces)
 }
 
 /* updates a bitfield with new information provided by a have message */
-void update_bitfield (uint64_t num_pieces, char* message, uint64_t* global_bitfield, char* bitfield)
+void update_bitfield (char* message, uint64_t* global_bitfield, char* bitfield)
 {
      uint32_t have;
-     memcpy(&have, message[1], sizeof(uint32_t));
+     memcpy(&have, &message[1], sizeof(uint32_t));
      have = ntohl(have);
      bitfield[have] = 1;
      global_bitfield[have]++;
