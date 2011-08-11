@@ -4,15 +4,16 @@
 
 #include "includes.h"
 
-struct Peer* init_peer (char* addr, char* port)
+struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
 {
      struct Peer* p = malloc(sizeof(struct Peer));
      memcpy((void *)&p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
      memcpy((void *)&p->addr.sin_port, port, sizeof(p->addr.sin_port));
-     p->state = NOT_CONNECTED | CHOKED;
+     p->state = NotConnected;
      p->bitfield = NULL;
      p->addr.sin_family = AF_INET;
      p->amount_downloaded = 0;
+     p->torrent = t;
      time(&p->started);
 #ifdef DEBUG
      p->dot_ip = inet_ntoa(p->addr.sin_addr);
@@ -52,17 +53,15 @@ void add_peer (struct PeerNode* current, struct Peer* peer)
 
 void add_peers (struct Torrent* t, struct PeerNode* peer_list)
 {
-     struct PeerNode* current = t->peer_list;
-   
      /* possible this is called from the first announce */
      if (t->peer_list == NULL) {
-          current = init_peer_node(peer_list->cargo, NULL);
+          t->peer_list = init_peer_node(peer_list->cargo, NULL);
           peer_list = peer_list->next;
      }
 
      /* iterate over all the peers */
      while (peer_list != NULL) {
-          add_peer(current, peer_list->cargo);
+          add_peer(t->peer_list, peer_list->cargo);
           peer_list = peer_list->next;
      }
 }

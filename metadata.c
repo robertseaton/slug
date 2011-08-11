@@ -16,7 +16,7 @@ char* get_url (struct BDictNode* b)
      if (output_value == NULL || output_value->type != BString)
           error("Failed to get URL from metadata.");
      else {
-          url = malloc(strlen(output_value->cargo.bStr) + 1);
+          url = malloc(strlen(output_value->cargo.bStr) + 1); 
           strcpy(url, output_value->cargo.bStr);
      }
 
@@ -62,14 +62,14 @@ void get_pieces (struct Piece* pieces, uint64_t* num_pieces, char* data)
      if (*num_pieces == 0)
           error("Parsing metadata returned an invalid number of pieces.");
 
-     pieces = malloc(sizeof(struct Piece) * *num_pieces);
+     pieces = calloc(*num_pieces, sizeof(struct Piece));
      
      uint64_t i;
      for (i = 0; i < *num_pieces; ++i) {
           
           uint64_t k;
           for (k = 0; k < CHARS_IN_PIECE; ++k) {
-               pieces[i].sha1[k] = (*j);
+               pieces[i].sha1[k] = (*j); 
                j++;
           }
           init_piece(pieces[i], i);
@@ -202,7 +202,9 @@ char* set_peer_id (double rand)
 
 struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
 {
-     struct Torrent* t = malloc(sizeof(struct Torrent));
+     /* struct Torrent tmp; */
+     static struct Torrent t;
+     /* struct Torrent* t = malloc(sizeof(struct Torrent)); */
      
      fseek(stream, 0, SEEK_END);
      long pos = ftell(stream);
@@ -215,33 +217,33 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
      struct BEncode* bEncodedDict = parseBEncode(data, &x);
 
      if (bEncodedDict->type == BDict) {
-          t->url = get_url(bEncodedDict->cargo.bDict);
-
           char input_key[5] = "info";
           struct BEncode* output_value = find_value(input_key, bEncodedDict->cargo.bDict);
 
           if (output_value == NULL || output_value->type != BDict)
                error("Failed to get torrent's metadata.");
           
-          t->announce_interval = DEFAULT_ANNOUNCE;
-          t->name = get_name(output_value->cargo.bDict);
-          t->length = get_length(output_value->cargo.bDict);
-          t->piece_length = get_piece_length(output_value->cargo.bDict);
-          get_pieces(t->pieces, &t->num_pieces, data);
-          t->url = get_url(bEncodedDict->cargo.bDict);
-          t->info_hash = (unsigned char *)get_info_hash(data);
-          t->peer_id = set_peer_id(peer_id);
-          t->port = port;
-          t->compact = 1;
-          t->uploaded = 0;
-          t->downloaded = 0;
-          t->left = t->num_pieces * t->piece_length;
-          t->global_bitfield = init_global_bitfield(t->num_pieces);
-          t->have_bitfield = init_have_bitfield(t->num_pieces);
-          freeBEncode(bEncodedDict);
-          free(data);
+          t.announce_interval = DEFAULT_ANNOUNCE;
+          t.name = get_name(output_value->cargo.bDict);
+          t.length = get_length(output_value->cargo.bDict);
+          t.piece_length = get_piece_length(output_value->cargo.bDict);
+          free(t.pieces);
+          get_pieces(t.pieces, &t.num_pieces, data);
+          t.url = get_url(bEncodedDict->cargo.bDict);
+          t.info_hash = (unsigned char *)get_info_hash(data);
+          t.peer_id = set_peer_id(peer_id);
+          t.port = port;
+          t.compact = 1;
+          t.uploaded = 0;
+          t.downloaded = 0;
+          t.left = t.num_pieces * t.piece_length;
+          t.global_bitfield = init_global_bitfield(t.num_pieces);
+          t.have_bitfield = init_have_bitfield(t.num_pieces);
+          t.peer_list = NULL; /* got to initialize this */
      } else
           error("Failed to parse metadata.");
      
-     return t;
+     free(data);
+     freeBEncode(bEncodedDict);
+     return &t;
 }

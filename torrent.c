@@ -23,6 +23,12 @@ unsigned char* construct_handshake (struct Torrent* t)
      return handshake;
 }
 
+void free_torrent (struct Torrent* t)
+{
+     /* FIXME */
+     free_pieces(t->pieces, t->num_pieces);
+}
+
 void start_torrent (char* file, double peer_id, double port)
 {
      FILE* stream = fopen(file, "r");
@@ -32,4 +38,5 @@ void start_torrent (char* file, double peer_id, double port)
      CURL* connection = curl_easy_init();
      
      first_announce(t, STARTED, connection, base);
+     free_torrent(t);
 }

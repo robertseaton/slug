@@ -31,17 +31,19 @@ struct PeerNode* get_peers (struct Torrent* t, char* data)
 {
      int64_t i = 0;
      char* j;
-     uint64_t num_peers = 0;
+
 #define PEERS_STR "5:peers"
      j = strstr(data, PEERS_STR);
      j += strlen(PEERS_STR);
      
      freeBEncode(parseBEncode(j, &i));
 
+     uint64_t num_peers = 0;
      while (isdigit(*j)) {
           num_peers = num_peers * 10 + ((*j) - '0');
           ++j; --i;
      }
+
      num_peers /= 6;
      /* skip the ':' */
      j++; i--;
@@ -49,15 +51,17 @@ struct PeerNode* get_peers (struct Torrent* t, char* data)
      /* possibility of 0 peers 
       * not sure if this works, might need to check earlier 
       * * */
-     if (!num_peers)
+     if (num_peers == 0)
           return NULL;
 
      struct PeerNode* current;
      current = init_peer_node(init_peer(j, j + 4), NULL);
-     j += 6;
      struct PeerNode* first = current;
+     current = current->next;
+     j += 6;
+
      uint64_t k;
-     for (k = 0; k < num_peers; k++) { 
+     for (k = 1; k < num_peers; k++) { 
           current = init_peer_node(init_peer(j, j + 4), NULL);
           current = current->next;
           j += 6;

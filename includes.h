@@ -51,10 +51,20 @@ struct Peer {
      uint64_t message_length;
      uint64_t amount_pending;
      uint64_t amount_downloaded;
+     uint64_t tstate;
      time_t started;
-     int8_t state;
      unsigned char* message;
      unsigned char* bitfield;
+     struct Torrent* torrent;
+     enum {
+          NotConnected,
+          Connected,
+          Handshaking,
+          HavePartial,
+          HaveMessage,
+          HavePartialMessage,
+          Dead
+     } state;
 #ifdef DEBUG
      /* human readable ip address */
      char* dot_ip;
@@ -101,9 +111,9 @@ struct BEncode {
 #define STOPPED 1
 #define COMPLETED 2
 #define VOID 8
-/* state identified for peer */
-#define NOT_CONNECTED (1 << 0)
-#define CHOKED        (1 << 1)
+/* tstate identifiers for peer */
+#define CHOKED       (1 << 0)
+#define INTERESTED   (1 << 1)
 /* state identifiers for piece */
 #define NEED          (1 << 0)
 
@@ -111,25 +121,29 @@ struct BEncode {
 void first_announce(struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* from bitfield.c */
-char* init_bitfield(uint64_t, char*);
+char* init_bitfield(uint64_t, unsigned char*);
 uint64_t* init_global_bitfield(uint64_t);
 char* init_have_bitfield(uint64_t);
-void update_bitfield(char*, uint64_t*, char*);
+void update_bitfield(unsigned char*, uint64_t*, unsigned char*);
 void update_global_bitfield(uint64_t, char*, uint64_t*);
 
 /* from metadata.c */
 struct Torrent* init_torrent(FILE*, double, double);
 
+/* from network.c */
+void init_connections(struct PeerNode*, unsigned char*, struct event_base*);
+
 /* from parser.c */
 struct BEncode* parseBEncode(char*, int64_t*);
 
 /* from peer.c */
-struct Peer* init_peer(char*, char*);
+struct Peer* init_peer(char*, char*, struct Torrent*);
 struct PeerNode* init_peer_node(struct Peer*, struct PeerNode*);
 void add_peers (struct Torrent*, struct PeerNode*);
 
 /* from piece.c */
 void init_piece(struct Piece, uint64_t);
+void free_pieces(struct Piece*, uint64_t);
 
 /* from torrent.c */
 void start_torrent(char*, double, double);
