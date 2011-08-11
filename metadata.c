@@ -37,7 +37,7 @@ uint64_t get_piece_length (struct BDictNode* b)
 }
 
 /* takes the metadata as a string and returns the pieces */
-void get_pieces (struct Piece* pieces, uint64_t* num_pieces, char* data)
+void get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
 {
      char* j;
      *num_pieces = 0;
@@ -62,17 +62,17 @@ void get_pieces (struct Piece* pieces, uint64_t* num_pieces, char* data)
      if (*num_pieces == 0)
           error("Parsing metadata returned an invalid number of pieces.");
 
-     pieces = calloc(*num_pieces, sizeof(struct Piece));
+     *pieces = calloc(*num_pieces, sizeof(struct Piece));
      
      uint64_t i;
      for (i = 0; i < *num_pieces; ++i) {
           
           uint64_t k;
           for (k = 0; k < CHARS_IN_PIECE; ++k) {
-               pieces[i].sha1[k] = (*j); 
+               (*pieces)[i].sha1[k] = (*j); 
                j++;
           }
-          init_piece(pieces[i], i);
+          init_piece((*pieces)[i], i);
      }
 }
 
@@ -227,8 +227,7 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.name = get_name(output_value->cargo.bDict);
           t.length = get_length(output_value->cargo.bDict);
           t.piece_length = get_piece_length(output_value->cargo.bDict);
-          free(t.pieces);
-          get_pieces(t.pieces, &t.num_pieces, data);
+          get_pieces(&t.pieces, &t.num_pieces, data);
           t.url = get_url(bEncodedDict->cargo.bDict);
           t.info_hash = (unsigned char *)get_info_hash(data);
           t.peer_id = set_peer_id(peer_id);
