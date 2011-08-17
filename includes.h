@@ -31,6 +31,8 @@ struct Torrent {
      uint64_t* global_bitfield;
      int8_t private;
      int8_t compact;
+     void* mmap;
+     FILE* file;
      struct Piece* pieces;
      struct PeerNode* peer_list;
 };

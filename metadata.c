@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <openssl/sha.h>
 
 #include "includes.h"
@@ -239,6 +240,8 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.global_bitfield = init_global_bitfield(t.num_pieces);
           t.have_bitfield = init_have_bitfield(t.num_pieces);
           t.peer_list = NULL; /* got to initialize this */
+          t.file = fopen(t.name, "w+");
+          // t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
      } else
           error("Failed to parse metadata.");
      
