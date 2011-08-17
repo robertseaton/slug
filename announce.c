@@ -55,14 +55,14 @@ struct PeerNode* get_peers (struct Torrent* t, char* data)
           return NULL;
 
      struct PeerNode* current;
-     current = init_peer_node(init_peer(j, j + 4), NULL);
+     current = init_peer_node(init_peer(j, j + 4, t), NULL);
      struct PeerNode* first = current;
      current = current->next;
      j += 6;
 
      uint64_t k;
      for (k = 1; k < num_peers; k++) { 
-          current = init_peer_node(init_peer(j, j + 4), NULL);
+          current = init_peer_node(init_peer(j, j + 4, t), NULL);
           current = current->next;
           j += 6;
      }
