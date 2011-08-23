@@ -86,16 +86,16 @@ void parse_msg (struct Peer* p)
           /* choke, unchoke, interested, and not interested messages all have a fixed length of 1 */
           switch ((int)*p->message) {
           case 0: /* choke */
-               p->tstate = p->tstate & CHOKED;
+               p->tstate.peer_choking = 1;
                return ;
           case 1: /* unchoke */
-               p->tstate = p->tstate & ~CHOKED;
+               p->tstate.peer_choking = 0;
                return ;
           case 2: /* interested */
-               p->tstate = p->tstate & INTERESTED;
+               p->tstate.peer_interested = 1;
                return ;
           case 3: /* uninterested */
-               p->tstate = p->tstate & ~INTERESTED;
+               p->tstate.peer_interested = 0;
                return ;
           } break;
      case 3: /* port */
