@@ -24,7 +24,7 @@
 
 CC = clang
 CFLAGS = -O0 -g -pipe -Wall -Wextra
-objects = announce.o bitfield.o main.o metadata.o network.o parser.o peer.o piece.o torrent.o url.o util.o
+objects = announce.o bitfield.o main.o metadata.o network.o parser.o peer.o piece.o scheduler.o torrent.o url.o util.o
 includes = -I. -lssl -lm -lcurl -levent
 
 all : slug

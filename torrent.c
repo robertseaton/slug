@@ -38,6 +38,7 @@ void start_torrent (char* file, double peer_id, double port)
      CURL* connection = curl_easy_init();
      
      first_announce(t, STARTED, connection, base);
+     schedule(t, base);
      event_base_dispatch(base);
      free_torrent(t);
 }
