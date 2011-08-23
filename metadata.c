@@ -73,7 +73,7 @@ void get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
                (*pieces)[i].sha1[k] = (*j); 
                j++;
           }
-          init_piece((*pieces)[i], i);
+          init_piece(&(*pieces)[i], i);
      }
 }
 
@@ -241,7 +241,7 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.have_bitfield = init_have_bitfield(t.num_pieces);
           t.peer_list = NULL; /* got to initialize this */
           t.file = fopen(t.name, "w+");
-          // t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
+          t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
      } else
           error("Failed to parse metadata.");
      
