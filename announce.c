@@ -1,3 +1,8 @@
+/*
+ * announce.c
+ * handle announcing to tracker
+ * * */
+
 #include <ctype.h>
 #include <curl/curl.h>
 #include <event2/event.h>
@@ -5,6 +10,7 @@
 #include <string.h>
 
 #include "includes.h"
+
 struct args {
      struct Torrent* t;
      CURL* connection;
