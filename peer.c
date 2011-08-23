@@ -65,3 +65,73 @@ void add_peers (struct Torrent* t, struct PeerNode* peer_list)
           peer_list = peer_list->next;
      }
 }
+
+struct PeerNode* find_unchoked (struct PeerNode* head, uint64_t index)
+{
+     struct PeerNode* unchoked_peers = NULL;
+     struct PeerNode* unchoked_head = unchoked_peers;
+
+     while (head != NULL) {
+          if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 1 && unchoked_peers == NULL) {
+               unchoked_peers = malloc(sizeof(struct PeerNode));
+               unchoked_head = unchoked_peers;
+               unchoked_peers->cargo = head->cargo;
+               unchoked_peers->next = NULL;
+          } else if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 1) {
+               unchoked_peers->next = malloc(sizeof(struct PeerNode));
+               unchoked_peers = unchoked_peers->next;
+               unchoked_peers->next = NULL;
+               unchoked_peers->cargo = head->cargo; 
+          }
+          head = head->next;
+     }
+
+     return unchoked_head;
+               
+}
+
+/* check if all the peers with a piece are choking us */
+uint8_t all_choked (struct PeerNode* head, uint64_t index)
+{
+     struct PeerNode* unchoked_peers = find_unchoked(head, index);
+
+     if (unchoked_peers != NULL)
+          return 0;
+     else
+          return 1;
+}
+
+void unchoke (struct Peer* p)
+{
+     uint32_t unchoke_prefix = htonl(1);
+     uint8_t unchoke_id = 1;
+
+     bufferevent_write(p->bufev, (const void *) &unchoke_prefix, sizeof(unchoke_prefix));
+     bufferevent_write(p->bufev, (const void *) &unchoke_id, sizeof(unchoke_id));
+     p->tstate.choked = 0;
+}
+
+void interested (struct Peer* p)
+{
+     uint32_t interested_prefix = htonl(1);
+     uint8_t interested_id = 2;
+     
+     bufferevent_write(p->bufev, (const void *) &interested_prefix, sizeof(interested_prefix));
+     bufferevent_write(p->bufev, (const void *) &interested_id, sizeof(interested_id));
+     p->tstate.interested = 1;
+}
+
+void request (struct Peer* peer, struct Piece* piece, off_t off)
+{
+     uint32_t request_prefix = htonl(5);
+     uint8_t request_id = 6;
+     uint32_t index = htonl(piece->index);
+     uint32_t request_length = htonl(REQUEST_LENGTH);
+     uint32_t offset = htonl(off);
+
+     bufferevent_write(peer->bufev, (const void *) &request_prefix, sizeof(request_prefix));
+     bufferevent_write(peer->bufev, (const void *) &request_id, sizeof(request_prefix));
+     bufferevent_write(peer->bufev, (const void *) &index, sizeof(index));
+     bufferevent_write(peer->bufev, (const void *) &offset, sizeof(offset));
+     bufferevent_write(peer->bufev, (const void *) &request_length, sizeof(request_length));
+}
