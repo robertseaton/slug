@@ -46,6 +46,13 @@ struct Piece {
      int8_t state;
 };
 
+struct State {
+     uint8_t choked : 1;
+     uint8_t interested : 1;
+     uint8_t peer_choking : 1;
+     uint8_t peer_interested : 1;
+};
+
 struct Peer {
      struct bufferevent* bufev;
      struct sockaddr_in addr;
@@ -53,10 +60,10 @@ struct Peer {
      uint64_t message_length;
      uint64_t amount_pending;
      uint64_t amount_downloaded;
-     uint64_t tstate;
      time_t started;
      unsigned char* message;
      unsigned char* bitfield;
+     struct State tstate;
      struct Torrent* torrent;
      enum {
           NotConnected,
@@ -109,15 +116,17 @@ struct BEncode {
 
 #define PORT 6784
 #define DEFAULT_ANNOUNCE 1800
+#define SCHEDULE_INTERVAL 1
+#define REQUEST_LENGTH 16384
+
 #define STARTED 0
-#define STOPPED 1
-#define COMPLETED 2
-#define VOID 8
 /* tstate identifiers for peer */
-#define CHOKED       (1 << 0)
-#define INTERESTED   (1 << 1)
+#define CHOKED          (1 << 0)
+#define INTERESTED      (1 << 1)
+#define PEER_CHOKING    (1 << 2)
+#define PEER_INTERESTED (1 << 3)
 /* state identifiers for piece */
-#define NEED          (1 << 0)
+#define NEED            (1 << 0)
 
 /* from announce.c */
 void first_announce(struct Torrent*, int8_t, CURL*, struct event_base*);
@@ -142,10 +151,19 @@ struct BEncode* parseBEncode(char*, int64_t*);
 struct Peer* init_peer(char*, char*, struct Torrent*);
 struct PeerNode* init_peer_node(struct Peer*, struct PeerNode*);
 void add_peers (struct Torrent*, struct PeerNode*);
+struct PeerNode* find_unchoked(struct PeerNode*, uint64_t);
+uint8_t all_choked(struct PeerNode*, uint64_t);
+void unchoke(struct Peer*);
+void interested(struct Peer*);
+void request(struct Peer*, struct Piece*, off_t);
 
 /* from piece.c */
-void init_piece(struct Piece, uint64_t);
+void init_piece(struct Piece*, uint64_t);
 void free_pieces(struct Piece*, uint64_t);
+void download_piece(struct Piece*, struct Peer*);
+
+/* from scheduler.c */
+void schedule(struct Torrent*, struct event_base*);
 
 /* from torrent.c */
 void start_torrent(char*, double, double);
