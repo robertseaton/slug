@@ -1,3 +1,4 @@
+#include <event2/bufferevent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -33,22 +34,16 @@ struct PeerNode* init_peer_node (struct Peer* cargo, struct PeerNode* next)
 
 void add_peer (struct PeerNode* current, struct Peer* peer)
 {
-     /* handle the first peer in the linked list */
-     if (current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr) {
-          
-          return ;
-     }
-     /* check against the rest of the peers in the linked list */
-     while (current->next != NULL) {
-          current = current->next;
+     while (current != NULL) {
           if (current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr)
                return ;
+          current = current->next;
      } 
      
      /* if we made it this far, that means our peer isn't already contained
       * in the linked list
       * * */
-     current->next = init_peer_node(peer, NULL);
+     current = init_peer_node(peer, NULL);
 }
 
 void add_peers (struct Torrent* t, struct PeerNode* peer_list)
@@ -58,12 +53,14 @@ void add_peers (struct Torrent* t, struct PeerNode* peer_list)
           t->peer_list = init_peer_node(peer_list->cargo, NULL);
           peer_list = peer_list->next;
      }
-
+     struct PeerNode* first = peer_list;
      /* iterate over all the peers */
      while (peer_list != NULL) {
           add_peer(t->peer_list, peer_list->cargo);
           peer_list = peer_list->next;
      }
+
+     t->peer_list = first;
 }
 
 struct PeerNode* find_unchoked (struct PeerNode* head, uint64_t index)
@@ -72,12 +69,12 @@ struct PeerNode* find_unchoked (struct PeerNode* head, uint64_t index)
      struct PeerNode* unchoked_head = unchoked_peers;
 
      while (head != NULL) {
-          if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 1 && unchoked_peers == NULL) {
+          if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 0 && unchoked_peers == NULL) {
                unchoked_peers = malloc(sizeof(struct PeerNode));
                unchoked_head = unchoked_peers;
                unchoked_peers->cargo = head->cargo;
                unchoked_peers->next = NULL;
-          } else if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 1) {
+          } else if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 0) {
                unchoked_peers->next = malloc(sizeof(struct PeerNode));
                unchoked_peers = unchoked_peers->next;
                unchoked_peers->next = NULL;

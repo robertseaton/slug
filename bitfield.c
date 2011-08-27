@@ -59,6 +59,11 @@ char* init_have_bitfield (uint64_t num_pieces)
 void update_bitfield (unsigned char* message, uint64_t* global_bitfield, unsigned char* bitfield)
 {
      uint32_t have;
+     
+     /* they haven't sent us a bitfield! */
+     if (bitfield == NULL) 
+          return ;
+
      memcpy(&have, &message[1], sizeof(uint32_t));
      have = ntohl(have);
      bitfield[have] = 1;

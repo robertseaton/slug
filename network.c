@@ -2,6 +2,7 @@
 #include <event2/event.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "includes.h"
 
@@ -20,6 +21,28 @@ void handle_request (struct Peer* peer)
      return ;
 }
 
+void handle_piece (struct Peer* p)
+{
+     uint32_t index, off, length;
+     memcpy(&index, &p->message[1], sizeof(index));
+     memcpy(&off, &p->message[5], sizeof(off));
+     
+     index = ntohl(index);
+     off = ntohl(off);
+     length = index * p->torrent->piece_length + off;
+     
+     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+     p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
+
+     if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length) {
+          if (verify_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, p->torrent->pieces[index].sha1)) {
+               printf("Successfully downloaded piece: #%d", index);
+               p->torrent->pieces[index].state = Have;
+          } else 
+               printf("Failed to verify piece: #%d", index);
+     }
+}
+
 void get_msg (struct bufferevent* bufev, struct Peer* p)
 {
      uint64_t amount_read = p->message_length - p->amount_pending;
@@ -29,7 +52,7 @@ void get_msg (struct bufferevent* bufev, struct Peer* p)
      if (p->amount_pending > 0 && message_length > 0) {
           if (p->state == Connected)
                p->state = HavePartialMessage;
-          else if (p->state != Connected)
+          else
                p->state = HavePartial;
      }
      else if (p->state == HavePartialMessage)
@@ -122,7 +145,7 @@ void parse_msg (struct Peer* p)
 #define PIECE_PREFIX 16393
      case PIECE_PREFIX: /* piece message */
           if (p->message[0] == 7) {
-               /* handle_piece(p); */
+               handle_piece(p);
                return;
           } else
                break;
@@ -170,13 +193,8 @@ void init_connection (struct Peer* p, unsigned char* handshake, struct event_bas
 
 void init_connections (struct PeerNode* head, unsigned char* handshake, struct event_base* base)
 {
-     /* first peer */
-     init_connection(head->cargo, handshake, base);
-     head = head->next;
-
-     /* rest */
-     while (head->next != NULL) {
-          head = head->next;
+     while (head != NULL) {
           init_connection(head->cargo, handshake, base);
+          head = head->next;
      }
 }

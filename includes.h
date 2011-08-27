@@ -43,7 +43,11 @@ struct Piece {
      uint64_t amount_requested;
      uint64_t rarity;
      unsigned char sha1[20];
-     int8_t state;
+     enum {
+          Need,
+          Downloading,
+          Have
+     } state;
 };
 
 struct State {
@@ -120,6 +124,7 @@ struct BEncode {
 #define REQUEST_LENGTH 16384
 
 #define STARTED 0
+#define VOID    8
 /* tstate identifiers for peer */
 #define CHOKED          (1 << 0)
 #define INTERESTED      (1 << 1)
@@ -161,6 +166,7 @@ void request(struct Peer*, struct Piece*, off_t);
 void init_piece(struct Piece*, uint64_t);
 void free_pieces(struct Piece*, uint64_t);
 void download_piece(struct Piece*, struct Peer*);
+int verify_piece(void*, uint64_t, char*);
 
 /* from scheduler.c */
 void schedule(struct Torrent*, struct event_base*);
