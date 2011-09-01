@@ -32,7 +32,7 @@ void download_piece (struct Piece* piece, struct Peer* peer)
      }
 }
 
-int verify_piece (void* addr, uint64_t piece_length, char* piece_sha)
+int verify_piece (void* addr, uint64_t piece_length, unsigned char* piece_sha)
 {
      SHA_CTX sha;
      unsigned char sha1result[20];
@@ -41,8 +41,16 @@ int verify_piece (void* addr, uint64_t piece_length, char* piece_sha)
      SHA1_Update(&sha, addr, piece_length);
      SHA1_Final(sha1result, &sha);
 
-     if (strncmp(sha1result, piece_sha, 20))
+     if (strncmp((char *) sha1result, (char *) piece_sha, 20))
           return 0;
      else
           return 1;
+}
+
+int has_piece (struct Piece* piece, struct Peer* peer)
+{
+     if (peer->bitfield == NULL)
+          return 0;
+     
+     return peer->bitfield[piece->index];
 }

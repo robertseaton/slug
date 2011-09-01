@@ -189,6 +189,8 @@ void init_connection (struct Peer* p, unsigned char* handshake, struct event_bas
      p->state = Handshaking;
      p->message_length = HANDSHAKE_LEN;
      p->amount_pending = HANDSHAKE_LEN;
+
+     interested(p);
 }
 
 void init_connections (struct PeerNode* head, unsigned char* handshake, struct event_base* base)

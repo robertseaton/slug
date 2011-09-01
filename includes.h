@@ -11,7 +11,13 @@
 struct Piece;
 struct BEncode;
 struct PeerNode;
+struct Peer;
 /* end forward declarations */
+
+struct QueueObject {
+     struct Peer* peer;
+     struct Piece* piece;
+};
 
 struct Torrent {
      char* peer_id;
@@ -33,6 +39,7 @@ struct Torrent {
      int8_t compact;
      void* mmap;
      FILE* file;
+     struct QueueObject download_queue[4];
      struct Piece* pieces;
      struct PeerNode* peer_list;
 };
@@ -45,6 +52,7 @@ struct Piece {
      unsigned char sha1[20];
      enum {
           Need,
+          Queued,
           Downloading,
           Have
      } state;
@@ -122,8 +130,11 @@ struct BEncode {
 #define DEFAULT_ANNOUNCE 1800
 #define SCHEDULE_INTERVAL 1
 #define REQUEST_LENGTH 16384
+#define QUEUE_SIZE 4
 
 #define STARTED 0
+#define STOPPED 1
+#define COMPLETED 2
 #define VOID    8
 /* tstate identifiers for peer */
 #define CHOKED          (1 << 0)
@@ -166,7 +177,8 @@ void request(struct Peer*, struct Piece*, off_t);
 void init_piece(struct Piece*, uint64_t);
 void free_pieces(struct Piece*, uint64_t);
 void download_piece(struct Piece*, struct Peer*);
-int verify_piece(void*, uint64_t, char*);
+int verify_piece(void*, uint64_t, unsigned char*);
+int has_piece(struct Piece*, struct Peer*);
 
 /* from scheduler.c */
 void schedule(struct Torrent*, struct event_base*);
