@@ -39,7 +39,7 @@ struct Torrent {
      int8_t compact;
      void* mmap;
      FILE* file;
-     struct QueueObject download_queue[4];
+     struct QueueObject* download_queue[4];
      struct Piece* pieces;
      struct PeerNode* peer_list;
 };

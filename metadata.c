@@ -242,6 +242,10 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.peer_list = NULL; /* got to initialize this */
           t.file = fopen(t.name, "w+");
           t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
+
+          int i;
+          for (i = 0; i < QUEUE_SIZE; i++)
+               t.download_queue[i] = NULL;
      } else
           error("Failed to parse metadata.");
      
