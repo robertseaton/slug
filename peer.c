@@ -118,6 +118,16 @@ void interested (struct Peer* p)
      p->tstate.interested = 1;
 }
 
+void not_interested (struct Peer* p)
+{
+     uint32_t not_interested_prefix = htonl(1);
+     uint8_t not_interested_id = 3;
+
+     bufferevent_write(p->bufev, (const void *) &not_interested_prefix, sizeof(not_interested_prefix));
+     bufferevent_write(p->bufev, (const void *) &not_interested_id, sizeof(not_interested_id));
+     p->tstate.interested = 0;
+}
+
 void request (struct Peer* peer, struct Piece* piece, off_t off)
 {
      uint32_t request_prefix = htonl(5);
@@ -131,4 +141,22 @@ void request (struct Peer* peer, struct Piece* piece, off_t off)
      bufferevent_write(peer->bufev, (const void *) &index, sizeof(index));
      bufferevent_write(peer->bufev, (const void *) &offset, sizeof(offset));
      bufferevent_write(peer->bufev, (const void *) &request_length, sizeof(request_length));
+
+#ifdef DEBUG
+     printf("Requested piece %d at offset %d from peer %s.\n", piece->index, off, peer->dot_ip);
+#endif
+}
+
+int8_t has_needed_piece (unsigned char* peer_bitfield, char* host_bitfield, uint64_t num_pieces)
+{
+     /* possible the bitfield hasn't been initialized yet */
+     if (peer_bitfield == NULL)
+          return 0;
+
+     uint64_t i;
+     for (i = 0; i < num_pieces; i++)
+          if (peer_bitfield[i] == 1 && host_bitfield[i] == 0)
+               return 1;
+
+     return 0;
 }

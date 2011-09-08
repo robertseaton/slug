@@ -129,6 +129,7 @@ struct BEncode {
 #define PORT 6784
 #define DEFAULT_ANNOUNCE 1800
 #define SCHEDULE_INTERVAL 1
+#define INTEREST_INTERVAL 10
 #define REQUEST_LENGTH 16384
 #define QUEUE_SIZE 4
 
@@ -171,7 +172,9 @@ struct PeerNode* find_unchoked(struct PeerNode*, uint64_t);
 uint8_t all_choked(struct PeerNode*, uint64_t);
 void unchoke(struct Peer*);
 void interested(struct Peer*);
+void not_interested(struct Peer*);
 void request(struct Peer*, struct Piece*, off_t);
+int8_t has_needed_piece(unsigned char*, char*, uint64_t);
 
 /* from piece.c */
 void init_piece(struct Piece*, uint64_t);
@@ -185,7 +188,7 @@ void schedule(struct Torrent*, struct event_base*);
 
 /* from torrent.c */
 void start_torrent(char*, double, double);
-
+void update_interest(struct Torrent*, struct event_base*);
 /* from url.c */
 char* construct_url(struct Torrent*, int8_t);
 

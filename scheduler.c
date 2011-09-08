@@ -63,6 +63,27 @@ void __schedule (evutil_socket_t fd, short what, void* arg)
      qsort(t->pieces, t->num_pieces, sizeof(struct Piece), rarest);
      
      build_queue(t);
+     for (i = 0; i < QUEUE_SIZE; i++)
+          if (t->download_queue[i] != NULL)
+               download_piece(t->download_queue[i]->piece, t->download_queue[i]->peer);
+}
+
+void __interest (evutil_socket_t fd, short what, void* arg)
+{
+     struct Torrent* t = arg;
+
+     struct PeerNode* pn = t->peer_list;
+     
+     while (pn != NULL) {
+          if (has_needed_piece(pn->cargo->bitfield, t->have_bitfield, t->num_pieces) 
+              && !pn->cargo->tstate.interested)
+               interested(pn->cargo);
+          else if (!has_needed_piece(pn->cargo->bitfield, t->have_bitfield, t->num_pieces) 
+                   && pn->cargo->tstate.interested)
+               not_interested(pn->cargo);
+
+          pn = pn->next;
+     }
 }
 
 void schedule (struct Torrent* t, struct event_base* base)
@@ -70,6 +91,15 @@ void schedule (struct Torrent* t, struct event_base* base)
      struct event* schedule_ev;
      struct timeval schedule_interval = {SCHEDULE_INTERVAL, 0};
      
-     schedule_ev = evtimer_new(base, __schedule, t);
+     schedule_ev = event_new(base, -1, EV_PERSIST, __schedule, t);
      evtimer_add(schedule_ev, &schedule_interval);
+}
+
+void update_interest (struct Torrent* t, struct event_base* base)
+{
+     struct event* interest_ev;
+     struct timeval interest_interval = {INTEREST_INTERVAL, 0};
+
+     interest_ev = event_new(base, -1, EV_PERSIST, __interest, t);
+     evtimer_add(interest_ev, &interest_interval);
 }
