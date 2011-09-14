@@ -14,6 +14,18 @@ int rarest (const void* x, const void* y)
      return (a->rarity - b->rarity);
 }
 
+/* check if a peer is already in our queue */
+int8_t in_queue (struct Torrent* t, struct Peer* p)
+{
+     int i;
+     for (i = 0; i < QUEUE_SIZE; i++) {
+          if (t->download_queue[i] != NULL && t->download_queue[i]->peer->addr.sin_addr.s_addr == p->addr.sin_addr.s_addr)
+               return 1;
+     }
+     
+     return 0;
+}
+
 struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 {
      struct QueueObject* qo = malloc(sizeof(struct QueueObject));
@@ -26,7 +38,8 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
           while (pn != NULL && t->pieces[i].state == Need) {
                if (!t->have_bitfield[t->pieces[i].index] && 
                    has_piece(&t->pieces[i], pn->cargo) && 
-                   !pn->cargo->tstate.peer_choking) {
+                   !pn->cargo->tstate.peer_choking &&
+                   !in_queue(t, pn->cargo)) {
                     t->pieces[i].state = Queued;
                     qo->peer = pn->cargo;
                     qo->piece = &t->pieces[i];
@@ -46,7 +59,7 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 void build_queue (struct Torrent* t)
 {
      int i = 0;
-     while (t->download_queue[i] != NULL && i < QUEUE_SIZE)
+     while (i < QUEUE_SIZE && t->download_queue[i] != NULL)
           i++;
 
      for ( ; i < QUEUE_SIZE; i++)
@@ -64,7 +77,7 @@ void __schedule (evutil_socket_t fd, short what, void* arg)
      
      build_queue(t);
      for (i = 0; i < QUEUE_SIZE; i++)
-          if (t->download_queue[i] != NULL)
+          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state != Downloading)
                download_piece(t->download_queue[i]->piece, t->download_queue[i]->peer);
 }
 
