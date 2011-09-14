@@ -1,4 +1,5 @@
 #include <event2/bufferevent.h>
+#include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -11,6 +12,8 @@ struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
      memcpy((void *)&p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
      memcpy((void *)&p->addr.sin_port, port, sizeof(p->addr.sin_port));
      p->state = NotConnected;
+     p->tstate.peer_choking = 1;
+     p->tstate.interested = 0;
      p->bitfield = NULL;
      p->addr.sin_family = AF_INET;
      p->amount_downloaded = 0;
@@ -130,20 +133,20 @@ void not_interested (struct Peer* p)
 
 void request (struct Peer* peer, struct Piece* piece, off_t off)
 {
-     uint32_t request_prefix = htonl(5);
+     uint32_t request_prefix = htonl(13);
      uint8_t request_id = 6;
      uint32_t index = htonl(piece->index);
      uint32_t request_length = htonl(REQUEST_LENGTH);
      uint32_t offset = htonl(off);
 
      bufferevent_write(peer->bufev, (const void *) &request_prefix, sizeof(request_prefix));
-     bufferevent_write(peer->bufev, (const void *) &request_id, sizeof(request_prefix));
+     bufferevent_write(peer->bufev, (const void *) &request_id, sizeof(request_id));
      bufferevent_write(peer->bufev, (const void *) &index, sizeof(index));
      bufferevent_write(peer->bufev, (const void *) &offset, sizeof(offset));
      bufferevent_write(peer->bufev, (const void *) &request_length, sizeof(request_length));
 
 #ifdef DEBUG
-     printf("Requested piece %d at offset %d from peer %s.\n", piece->index, off, peer->dot_ip);
+     printf("Requested piece %lu at offset %ld from peer %s.\n", piece->index, off, peer->dot_ip);
 #endif
 }
 
