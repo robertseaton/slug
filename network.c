@@ -24,6 +24,9 @@ void handle_request (struct Peer* peer)
 void handle_piece (struct Peer* p)
 {
      uint32_t index, off, length;
+#ifdef DEBUG
+     printf("PIECE: %s\n", p->dot_ip);
+#endif
      memcpy(&index, &p->message[1], sizeof(index));
      memcpy(&off, &p->message[5], sizeof(off));
      
@@ -31,7 +34,7 @@ void handle_piece (struct Peer* p)
      off = ntohl(off);
      length = index * p->torrent->piece_length + off;
      
-     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+     // memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
      p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
 
      if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length) {
@@ -112,6 +115,9 @@ void parse_msg (struct Peer* p)
                p->tstate.peer_choking = 1;
                return ;
           case 1: /* unchoke */
+#ifdef DEBUG
+               printf("UNCHOKE: %s\n", p->dot_ip);
+#endif
                p->tstate.peer_choking = 0;
                return ;
           case 2: /* interested */
@@ -150,7 +156,7 @@ void parse_msg (struct Peer* p)
           } else
                break;
      default: /* full bitfield */
-          init_bitfield(p->torrent->num_pieces, p->message);
+          p->bitfield = init_bitfield(p->torrent->num_pieces, p->message);
           return ;
      }
 }
@@ -189,8 +195,6 @@ void init_connection (struct Peer* p, unsigned char* handshake, struct event_bas
      p->state = Handshaking;
      p->message_length = HANDSHAKE_LEN;
      p->amount_pending = HANDSHAKE_LEN;
-
-     interested(p);
 }
 
 void init_connections (struct PeerNode* head, unsigned char* handshake, struct event_base* base)
