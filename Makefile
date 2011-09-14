@@ -23,7 +23,7 @@
  # # #
 
 CC = clang
-CFLAGS = -O0 -g -pipe -Wall
+CFLAGS = -O0 -g -pipe -Wall -DDEBUG
 objects = announce.o bitfield.o main.o metadata.o network.o parser.o peer.o piece.o scheduler.o torrent.o url.o util.o
 includes = -I. -lm -lcurl -levent -lcrypto
 
@@ -31,7 +31,7 @@ all : slug
 analyze : 
 	clang --analyze -DDEBUG $(objects:%.o=%.c); rm *.plist
 slug : $(objects)
-	$(CC) $(CFLAGS) -DDEBUG -o slug $(objects) $(includes)
+	$(CC) $(CFLAGS) -o slug $(objects) $(includes)
 
 clean :
 	 rm slug $(objects)
