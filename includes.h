@@ -149,7 +149,7 @@ struct BEncode {
 void first_announce(struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* from bitfield.c */
-char* init_bitfield(uint64_t, unsigned char*);
+unsigned char* init_bitfield(uint64_t, unsigned char*);
 uint64_t* init_global_bitfield(uint64_t);
 char* init_have_bitfield(uint64_t);
 void update_bitfield(unsigned char*, uint64_t*, unsigned char*);
