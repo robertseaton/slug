@@ -1,22 +1,26 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "includes.h"
 
 /* parses a bitfield message into a bitfield data structure */
-char* init_bitfield (uint64_t num_pieces, unsigned char* message)
+unsigned char* init_bitfield (uint64_t num_pieces, unsigned char* message)
 {
      /* never malloc 0 */
      if (num_pieces == 0)
           error("Failed to initialize peer's bitfield.");
 
-     char* bitfield;
+     unsigned char* bitfield;
      bitfield = malloc(num_pieces);
 
      uint32_t i, j;
      for (i = 0; i < num_pieces; i++) {
           j = i / 8 + 1;
-          bitfield[i] = message[j] & (1 << (i % 8));
+          if (message[j] & (1 << (i % 8)))
+               bitfield[i] = 1;
+          else
+               bitfield[i] = 0;
      }
 
      return bitfield;
