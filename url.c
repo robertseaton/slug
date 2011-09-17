@@ -53,10 +53,10 @@ char* construct_url (struct Torrent* t, int8_t event)
               "%s"
               "?info_hash=%s"
               "&peer_id=%s"
-              "&port=%lu"
-              "&uploaded=%lu"
-              "&downloaded=%lu"
-              "&left=%lu"
+              "&port=%llu"
+              "&uploaded=%llu"
+              "&downloaded=%llu"
+              "&left=%llu"
               "&compact=%d",
               t->url,
               info_hash,
