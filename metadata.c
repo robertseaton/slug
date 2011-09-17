@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <openssl/sha.h>
+#include <unistd.h>
 
 #include "includes.h"
 
@@ -241,6 +242,11 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.have_bitfield = init_have_bitfield(t.num_pieces);
           t.peer_list = NULL; /* got to initialize this */
           t.file = fopen(t.name, "w+");
+
+          /* write a dummy byte for MMAPing */
+          fseek(t.file, t.length - 1, SEEK_SET);
+          write(fileno(t.file), "", 1);
+
           t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
 
           int i;

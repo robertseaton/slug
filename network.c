@@ -24,17 +24,20 @@ void handle_request (struct Peer* peer)
 void handle_piece (struct Peer* p)
 {
      uint32_t index, off, length;
-#ifdef DEBUG
-     printf("PIECE: %s\n", p->dot_ip);
-#endif
+
      memcpy(&index, &p->message[1], sizeof(index));
      memcpy(&off, &p->message[5], sizeof(off));
      
      index = ntohl(index);
      off = ntohl(off);
      length = index * p->torrent->piece_length + off;
-     
-     // memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+
+#ifdef DEBUG
+     if (off == 0)
+          printf("PIECE: #%d from %s\n", index, p->dot_ip);
+#endif
+
+     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
      p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
 
      if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length) {
