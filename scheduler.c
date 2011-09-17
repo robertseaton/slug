@@ -58,12 +58,10 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 
 void build_queue (struct Torrent* t)
 {
-     int i = 0;
-     while (i < QUEUE_SIZE && t->download_queue[i] != NULL)
-          i++;
-
-     for ( ; i < QUEUE_SIZE; i++)
-          t->download_queue[i] = get_rarest_unchoked(t);
+     int i;
+     for (i = 0; i < QUEUE_SIZE; i++)
+          if (t->download_queue[i] == NULL || t->download_queue[i]->piece->state == Have)
+               t->download_queue[i] = get_rarest_unchoked(t);
 }
 
 void __schedule (evutil_socket_t fd, short what, void* arg)
@@ -77,7 +75,7 @@ void __schedule (evutil_socket_t fd, short what, void* arg)
      
      build_queue(t);
      for (i = 0; i < QUEUE_SIZE; i++)
-          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state != Downloading)
+          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state == Need)
                download_piece(t->download_queue[i]->piece, t->download_queue[i]->peer);
 }
 
