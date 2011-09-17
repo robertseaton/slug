@@ -146,7 +146,8 @@ void request (struct Peer* peer, struct Piece* piece, off_t off)
      bufferevent_write(peer->bufev, (const void *) &request_length, sizeof(request_length));
 
 #ifdef DEBUG
-     printf("Requested piece %lu at offset %ld from peer %s.\n", piece->index, off, peer->dot_ip);
+     if (off == 0)
+          printf("Requested piece %lu from peer %s.\n", piece->index, peer->dot_ip);
 #endif
 }
 
