@@ -43,12 +43,20 @@ char* construct_url (struct Torrent* t, int8_t event)
 {
      char* peer_id = encode_url(t->peer_id, &t->peer_id[19]);
      char* info_hash = encode_url((char *)t->info_hash, (char *)&t->info_hash[19]);
-     int32_t url_length = strlen(t->url) + strlen("?info_hash=") + strlen(info_hash) + 
-          strlen("&peer_id=") + strlen(peer_id) + strlen("&port=") + strlen("&uploaded=") 
-          + strlen("&downloaded=") + strlen("&left=") + strlen("&compact=") 
+     int32_t url_length = strlen(t->url) 
+          + strlen("?info_hash=") 
+          + strlen(info_hash) 
+          + strlen("&peer_id=") 
+          + strlen(peer_id) 
+          + strlen("&port=") 
+          + strlen("&uploaded=") 
+          + strlen("&downloaded=") 
+          + strlen("&left=") 
+          + strlen("&compact=") 
           + strlen("&event=completed") + 100;
      char* url = malloc(url_length);
-     
+
+#define NUMWANT 10000   
      snprintf(url, url_length,
               "%s"
               "?info_hash=%s"
@@ -57,7 +65,8 @@ char* construct_url (struct Torrent* t, int8_t event)
               "&uploaded=%lu"
               "&downloaded=%lu"
               "&left=%lu"
-              "&compact=%d",
+              "&compact=%d"
+              "&numwant=%d",
               t->url,
               info_hash,
               peer_id,
@@ -65,7 +74,8 @@ char* construct_url (struct Torrent* t, int8_t event)
               t->uploaded,
               t->downloaded,
               t->left,
-              t->compact);
+              t->compact,
+              50);
 
      if (event == STARTED)
           strcat(url, "&event=started");
