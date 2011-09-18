@@ -9,8 +9,8 @@
 struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
 {
      struct Peer* p = malloc(sizeof(struct Peer));
-     memcpy((void *)&p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
-     memcpy((void *)&p->addr.sin_port, port, sizeof(p->addr.sin_port));
+     memcpy((void *) &p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
+     memcpy((void *) &p->addr.sin_port, port, sizeof(p->addr.sin_port));
      p->state = NotConnected;
      p->tstate.peer_choking = 1;
      p->tstate.interested = 0;
@@ -19,9 +19,6 @@ struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
      p->amount_downloaded = 0;
      p->torrent = t;
      time(&p->started);
-#ifdef DEBUG
-     p->dot_ip = inet_ntoa(p->addr.sin_addr);
-#endif
 
      return p;
 }
@@ -147,7 +144,7 @@ void request (struct Peer* peer, struct Piece* piece, off_t off)
 
 #ifdef DEBUG
      if (off == 0)
-          printf("Requested piece %lu from peer %s.\n", piece->index, peer->dot_ip);
+          printf("Requested piece %lu from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
 #endif
 }
 

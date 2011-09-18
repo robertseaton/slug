@@ -86,10 +86,6 @@ struct Peer {
           HavePartialMessage,
           Dead
      } state;
-#ifdef DEBUG
-     /* human readable ip address */
-     char* dot_ip;
-#endif
 };
 
 /* peers linked list */
@@ -146,7 +142,7 @@ struct BEncode {
 #define NEED            (1 << 0)
 
 /* from announce.c */
-void first_announce(struct Torrent*, int8_t, CURL*, struct event_base*);
+void announce(struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* from bitfield.c */
 unsigned char* init_bitfield(uint64_t, unsigned char*);

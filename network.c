@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "includes.h"
 
@@ -34,18 +35,18 @@ void handle_piece (struct Peer* p)
 
 #ifdef DEBUG
      if (off == 0)
-          printf("PIECE: #%d from %s\n", index, p->dot_ip);
+          printf("PIECE: #%d from %s\n", index, inet_ntoa(p->addr.sin_addr));
 #endif
-
+     
      memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
      p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
 
      if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length) {
           if (verify_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, p->torrent->pieces[index].sha1)) {
-               printf("Successfully downloaded piece: #%d", index);
+               printf("Successfully downloaded piece: #%d\n", index);
                p->torrent->pieces[index].state = Have;
           } else 
-               printf("Failed to verify piece: #%d", index);
+               printf("Failed to verify piece: #%d\n", index);
      }
 }
 
@@ -119,7 +120,7 @@ void parse_msg (struct Peer* p)
                return ;
           case 1: /* unchoke */
 #ifdef DEBUG
-               printf("UNCHOKE: %s\n", p->dot_ip);
+               printf("UNCHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
 #endif
                p->tstate.peer_choking = 0;
                return ;
@@ -159,6 +160,9 @@ void parse_msg (struct Peer* p)
           } else
                break;
      default: /* full bitfield */
+#ifdef DEBUG
+          printf("BITFIELD: %s\n", inet_ntoa(p->addr.sin_addr));
+#endif
           p->bitfield = init_bitfield(p->torrent->num_pieces, p->message);
           return ;
      }
@@ -189,6 +193,9 @@ void init_connection (struct Peer* p, unsigned char* handshake, struct event_bas
      fcntl(p->connectionfd, F_SETFL, O_NONBLOCK);
      p->bufev = bufferevent_socket_new(base, p->connectionfd, BEV_OPT_CLOSE_ON_FREE);
      bufferevent_socket_connect(p->bufev, (struct sockaddr *) &p->addr, sizeof(p->addr));
+#ifdef DEBUG
+     printf("CONNECTED: %s\n", inet_ntoa(p->addr.sin_addr));
+#endif
      bufferevent_setcb(p->bufev, handle_peer_response, NULL, NULL, p);
      bufferevent_enable(p->bufev, EV_READ);
 
