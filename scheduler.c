@@ -35,14 +35,14 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 
      int i;
      for (i = 0; i < t->num_pieces; i++) {
-          while (pn != NULL && t->pieces[i].state == Need) {
-               if (!t->have_bitfield[t->pieces[i].index] && 
-                   has_piece(&t->pieces[i], pn->cargo) && 
+          while (pn != NULL && t->pieces[0].state == Need) {
+               if (!t->have_bitfield[t->pieces[0].index] && 
+                   has_piece(&t->pieces[0], pn->cargo) && 
                    !pn->cargo->tstate.peer_choking &&
                    !in_queue(t, pn->cargo)) {
-                    t->pieces[i].state = Queued;
+                    t->pieces[0].state = Queued;
                     qo->peer = pn->cargo;
-                    qo->piece = &t->pieces[i];
+                    qo->piece = &t->pieces[0];
 
                     return qo;
                } else
@@ -67,6 +67,7 @@ void build_queue (struct Torrent* t)
 void __schedule (evutil_socket_t fd, short what, void* arg)
 {
      struct Torrent* t = arg;
+
      uint64_t i;
      for (i = 0; i < t->num_pieces; ++i)
           t->pieces[i].rarity = t->global_bitfield[t->pieces[i].index];
@@ -75,7 +76,7 @@ void __schedule (evutil_socket_t fd, short what, void* arg)
      
      build_queue(t);
      for (i = 0; i < QUEUE_SIZE; i++)
-          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state == Need)
+          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state == Queued)
                download_piece(t->download_queue[i]->piece, t->download_queue[i]->peer);
 }
 
