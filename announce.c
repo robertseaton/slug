@@ -60,6 +60,10 @@ struct PeerNode* get_peers (struct Torrent* t, char* data)
      if (num_peers == 0)
           return NULL;
 
+#ifdef DEBUG
+     printf("ANNOUNCE: %lu peers.\n", num_peers);
+#endif
+
      struct PeerNode* current;
      current = init_peer_node(init_peer(j, j + 4, t), NULL);
      struct PeerNode* first = current;
@@ -81,58 +85,11 @@ uint64_t get_interval (struct BDictNode* b)
      return output_value->cargo.bInt;
 }
 
-void announce (evutil_socket_t fd, short what, void* arg)
+void __announce (evutil_socket_t fd, short what, void* arg)
 {
-     struct args* recv_arg = (struct args*)arg;
-     struct Torrent* t = recv_arg->t;
-     CURL* connection = recv_arg->connection;
-     struct event_base* base = recv_arg->base;
-     int32_t length = strlen(t->name) + strlen("/tmp/slug/-announce") + 1;
-     char* filepath = malloc(length);
-     char* url = construct_url(t, VOID);
-     snprintf(filepath, length, "/tmp/slug/%s-announce", t->name);
-     FILE* announce_data = fopen(filepath, "w");
-
-     curl_easy_setopt(connection, CURLOPT_URL, url);
-     curl_easy_setopt(connect, CURLOPT_WRITEDATA, announce_data);
-     curl_easy_perform(connection);
-
-     fclose(announce_data);
-     announce_data = fopen(filepath, "r");
-
-     /* read announce response into array */
-     fseek(announce_data, 0, SEEK_END);
-     int32_t pos = ftell(announce_data);
-     fseek(announce_data, 0, SEEK_SET);
-     char* data = malloc(pos);
-     fread(data, pos, 1, announce_data);
-     
-     int64_t x = 0;
-     struct BEncode* announceBEncode = parseBEncode(data, &x);
-
-     if (announceBEncode->type != BDict)
-          error("Announce returned invalid BEncode.");
-     else if (failed(announceBEncode->cargo.bDict))
-          pfailure_reason(announceBEncode->cargo.bDict);
-     else {
-          add_peers(t, get_peers(t, data));
-          t->announce_interval = get_interval(announceBEncode->cargo.bDict);
-     }
-
-     struct event* announce_ev;
-     struct timeval announce_interval = {t->announce_interval, 0};
-     struct args args;
-     args.t = t;
-     args.connection = connection;
-     args.base = base;
-     announce_ev = evtimer_new(base, announce, &args);
-     evtimer_add(announce_ev, &announce_interval);
-     free(data);
-     free(filepath);
-     freeBEncode(announceBEncode);
 }
 
-void first_announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* base)
+void announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* base)
 {
      int32_t length = strlen(t->name) + strlen("/tmp/slug/-announce") + 1;
      char* filepath = malloc(length);
@@ -166,14 +123,8 @@ void first_announce (struct Torrent* t, int8_t event, CURL* connection, struct e
           t->announce_interval = get_interval(announceBEncode->cargo.bDict);
      }
 
-     struct event* announce_ev;
-     struct timeval announce_interval = {t->announce_interval, 0};
-     struct args args;
-     args.t = t;
-     args.connection = connection;
-     args.base = base;
-     announce_ev = evtimer_new(base, announce, &args);
-     evtimer_add(announce_ev, &announce_interval);
+
+
      free(data);
      free(filepath);
      freeBEncode(announceBEncode);
