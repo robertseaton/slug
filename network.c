@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <event2/bufferevent.h>
 #include <event2/event.h>
 #include <fcntl.h>
@@ -12,19 +13,26 @@ void get_msg(struct bufferevent*, struct Peer*);
 void read_prefix(struct bufferevent*, struct Peer*);
 void get_prefix(struct bufferevent*, struct Peer*);
 
-void handle_cancel (struct Peer* peer)
+void handle_cancel (struct Peer* p)
 {
+#ifdef DEBUG
+     printf("CANCEL: %s\n", inet_ntoa(p->addr.sin_addr));
+#endif
      return ;
 }
 
-void handle_request (struct Peer* peer)
+void handle_request (struct Peer* p)
 {
+#ifdef DEBUG
+     printf("REQUEST: %s\n", inet_ntoa(p->addr.sin_addr));
+#endif
      return ;
 }
 
 void handle_piece (struct Peer* p)
 {
-     uint32_t index, off, length;
+     uint32_t index, off;
+     uint64_t length;
 
      memcpy(&index, &p->message[1], sizeof(index));
      memcpy(&off, &p->message[5], sizeof(off));
@@ -34,26 +42,33 @@ void handle_piece (struct Peer* p)
      length = index * p->torrent->piece_length + off;
 
 #ifdef DEBUG
-     if (off == 0)
-          printf("PIECE: #%d from %s\n", index, inet_ntoa(p->addr.sin_addr));
+     /* if (off == 0) */
+     printf("PIECE: #%d from %s\n", index, inet_ntoa(p->addr.sin_addr));
 #endif
      
      memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
      p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
 
-     if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length) {
+     if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length)
           if (verify_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, p->torrent->pieces[index].sha1)) {
                printf("Successfully downloaded piece: #%d\n", index);
                p->torrent->pieces[index].state = Have;
-          } else 
+          } else {
                printf("Failed to verify piece: #%d\n", index);
-     }
+               p->torrent->pieces[index].state = Need;
+               p->torrent->pieces[index].amount_downloaded = 0;
+          }
 }
 
 void get_msg (struct bufferevent* bufev, struct Peer* p)
 {
      uint64_t amount_read = p->message_length - p->amount_pending;
-     uint64_t message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
+     int64_t message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
+     
+     /* possible bufferevent_read found nothing */
+     if (message_length < 0)
+          message_length = 0;
+
      p->amount_pending = p->amount_pending - message_length;
      
      if (p->amount_pending > 0 && message_length > 0) {
@@ -76,7 +91,12 @@ void read_prefix (struct bufferevent* bufev, struct Peer* p)
      p->amount_pending = PREFIX_LEN;
      p->message_length = PREFIX_LEN;
      p->message = malloc(sizeof(unsigned char) * PREFIX_LEN);
-     uint64_t message_length = bufferevent_read(bufev, &p->message_length, p->amount_pending);
+     int64_t message_length = bufferevent_read(bufev, &p->message_length, p->amount_pending);
+
+     /* possible bufferevent_read found nothing */
+     if (message_length < 0)
+          message_length = 0;
+
      p->amount_pending = p->amount_pending - message_length;
 
      if (p->amount_pending > 0 && message_length > 0) {
@@ -116,6 +136,9 @@ void parse_msg (struct Peer* p)
           /* choke, unchoke, interested, and not interested messages all have a fixed length of 1 */
           switch ((int)*p->message) {
           case 0: /* choke */
+#ifdef DEBUG
+               printf("CHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
+#endif
                p->tstate.peer_choking = 1;
                return ;
           case 1: /* unchoke */
@@ -176,8 +199,10 @@ void handle_peer_response (struct bufferevent* bufev, void* payload)
           p->message = malloc(sizeof(unsigned char) * p->message_length);
      else if (p->state == Connected)
           read_prefix(bufev, p);
+
      if (p->state == Connected && p->amount_pending == 0)
           get_prefix(bufev, p);
+
      if (p->state == HaveMessage)
           parse_msg(p);
      

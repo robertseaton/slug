@@ -1,6 +1,7 @@
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "includes.h"
 
@@ -24,6 +25,7 @@ void download_piece (struct Piece* piece, struct Peer* peer)
      off_t offset = 0;
      piece->amount_requested = 0;
      piece->state = Downloading;
+     // request(peer, piece, offset);
 
      while (peer->torrent->piece_length - piece->amount_requested > 0) {
           request(peer, piece, offset);
