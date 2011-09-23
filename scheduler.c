@@ -35,14 +35,14 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 
      int i;
      for (i = 0; i < t->num_pieces; i++) {
-          while (pn != NULL && t->pieces[0].state == Need) {
-               if (!t->have_bitfield[t->pieces[0].index] && 
-                   has_piece(&t->pieces[0], pn->cargo) && 
+          while (pn != NULL && t->pieces[24].state == Need) {
+               if (!t->have_bitfield[t->pieces[24].index] && 
+                   has_piece(&t->pieces[24], pn->cargo) && 
                    !pn->cargo->tstate.peer_choking &&
                    !in_queue(t, pn->cargo)) {
-                    t->pieces[0].state = Queued;
+                    t->pieces[24].state = Queued;
                     qo->peer = pn->cargo;
-                    qo->piece = &t->pieces[0];
+                    qo->piece = &t->pieces[24];
 
                     return qo;
                } else

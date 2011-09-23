@@ -32,7 +32,7 @@ void handle_request (struct Peer* p)
 void handle_piece (struct Peer* p)
 {
      uint32_t index, off;
-     uint64_t length;
+     unsigned long long length;
 
      memcpy(&index, &p->message[1], sizeof(index));
      memcpy(&off, &p->message[5], sizeof(off));
@@ -42,7 +42,7 @@ void handle_piece (struct Peer* p)
      length = index * p->torrent->piece_length + off;
 
 #ifdef DEBUG
-     /* if (off == 0) */
+     if (off == 0)
      printf("PIECE: #%d from %s\n", index, inet_ntoa(p->addr.sin_addr));
 #endif
      
@@ -53,8 +53,10 @@ void handle_piece (struct Peer* p)
           if (verify_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, p->torrent->pieces[index].sha1)) {
                printf("Successfully downloaded piece: #%d\n", index);
                p->torrent->pieces[index].state = Have;
+               have(&p->torrent->pieces[index], p->torrent->peer_list, p->torrent->have_bitfield);
           } else {
-               printf("Failed to verify piece: #%d\n", index);
+               printf("Failed to verify piece: #%d\n, length: %llu", index, length);
+               //unqueue(&peer->torrent->pieces[index]);
                p->torrent->pieces[index].state = Need;
                p->torrent->pieces[index].amount_downloaded = 0;
           }
@@ -71,16 +73,10 @@ void get_msg (struct bufferevent* bufev, struct Peer* p)
 
      p->amount_pending = p->amount_pending - message_length;
      
-     if (p->amount_pending > 0 && message_length > 0) {
-          if (p->state == Connected)
-               p->state = HavePartialMessage;
-          else
-               p->state = HavePartial;
-     }
-     else if (p->state == HavePartialMessage)
-          p->state = HaveMessage;
+     if (p->amount_pending > 0)
+          p->state = HavePartialMessage;
      else
-          p->state = Connected;
+          p->state = HaveMessage;
 }
 
 void read_prefix (struct bufferevent* bufev, struct Peer* p)
@@ -99,16 +95,8 @@ void read_prefix (struct bufferevent* bufev, struct Peer* p)
 
      p->amount_pending = p->amount_pending - message_length;
 
-     if (p->amount_pending > 0 && message_length > 0) {
-          if (p->state == Connected)
-               p->state = HavePartialMessage;
-          else
-               p->state = HavePartial;
-     }
-     else if (p->state == HavePartialMessage)
-          p->state = HaveMessage;
-     else
-          p->state = Connected;
+     if (p->amount_pending > 0)
+          printf("Read partial prefix!\n");
 }
 
 void get_prefix (struct bufferevent* bufev, struct Peer* p)
@@ -121,13 +109,12 @@ void get_prefix (struct bufferevent* bufev, struct Peer* p)
 
      p->message = malloc(sizeof(unsigned char) * p->message_length);
      get_msg(bufev, p);
-     
-     if (p->state == Connected)
-          p->state = HaveMessage;
 }
 
 void parse_msg (struct Peer* p)
 {
+     p->state = Connected;
+
      switch(p->message_length) {
      case 0:
           /* keep alive message, nothing needs to be done */
@@ -175,6 +162,11 @@ void parse_msg (struct Peer* p)
                handle_cancel(p);
                return;
           } break;
+     case 68: /* handshake */
+#ifdef DEBUG
+          printf("HANDSHAKE: %s\n", inet_ntoa(p->addr.sin_addr));
+          return;
+#endif
 #define PIECE_PREFIX 16393
      case PIECE_PREFIX: /* piece message */
           if (p->message[0] == 7) {
@@ -182,12 +174,16 @@ void parse_msg (struct Peer* p)
                return;
           } else
                break;
-     default: /* full bitfield */
+     default:
+          if (p->message_length == (int)(p->torrent->num_pieces / 8.0 + 1.9)) { /* full bitfield */
 #ifdef DEBUG
-          printf("BITFIELD: %s\n", inet_ntoa(p->addr.sin_addr));
+               printf("BITFIELD: %s\n", inet_ntoa(p->addr.sin_addr));
 #endif
-          p->bitfield = init_bitfield(p->torrent->num_pieces, p->message);
-          return ;
+               p->bitfield = init_bitfield(p->torrent->num_pieces, p->message);
+
+               return ;
+          } else
+                 printf("Received malformed message.");
      }
 }
 
@@ -195,18 +191,19 @@ void handle_peer_response (struct bufferevent* bufev, void* payload)
 {
      struct Peer* p = payload;
 
-     if (p->state == Handshaking)
+     if (p->state == Handshaking) {
           p->message = malloc(sizeof(unsigned char) * p->message_length);
-     else if (p->state == Connected)
+          get_msg(bufev, p);
+     }     
+     else if (p->state == HavePartialMessage)
+          get_msg(bufev, p);
+     else if (p->state == Connected) {
           read_prefix(bufev, p);
-
-     if (p->state == Connected && p->amount_pending == 0)
           get_prefix(bufev, p);
+     } 
 
      if (p->state == HaveMessage)
           parse_msg(p);
-     
-     get_msg(bufev, p);
 }
 
 void init_connection (struct Peer* p, unsigned char* handshake, struct event_base* base)

@@ -143,9 +143,26 @@ void request (struct Peer* peer, struct Piece* piece, off_t off)
      bufferevent_write(peer->bufev, (const void *) &request_length, sizeof(request_length));
 
 #ifdef DEBUG
-     /* if (off == 0) */
-     printf("Requested piece %lu from peer %s at offset %d.\n", piece->index, inet_ntoa(peer->addr.sin_addr), off);
+     if (off == 0)
+     printf("Requested piece %lu from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
 #endif
+}
+
+void have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
+{
+     uint32_t have_prefix = htonl(5);
+     uint8_t have_id = 4;
+     uint32_t index = htonl(piece->index);
+     struct PeerNode* head = peer_list;
+
+     while (head != NULL) {
+          bufferevent_write(head->cargo->bufev, (const void *) &have_prefix, sizeof(have_prefix));
+          bufferevent_write(head->cargo->bufev, (const void *) &have_id, sizeof(have_id));
+          bufferevent_write(head->cargo->bufev, (const void *) &index, sizeof(index));
+          head = head->next;
+     }
+
+     have_bitfield[piece->index] = 1;
 }
 
 int8_t has_needed_piece (unsigned char* peer_bitfield, char* host_bitfield, uint64_t num_pieces)

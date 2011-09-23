@@ -170,6 +170,7 @@ void unchoke(struct Peer*);
 void interested(struct Peer*);
 void not_interested(struct Peer*);
 void request(struct Peer*, struct Piece*, off_t);
+void have(struct Piece*, struct PeerNode*, char*);
 int8_t has_needed_piece(unsigned char*, char*, uint64_t);
 
 /* from piece.c */

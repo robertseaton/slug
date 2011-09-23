@@ -22,7 +22,7 @@ void init_piece (struct Piece* p, uint64_t index)
 
 void download_piece (struct Piece* piece, struct Peer* peer)
 {
-     off_t offset = 0;
+     uint64_t offset = 0;
      piece->amount_requested = 0;
      piece->state = Downloading;
      // request(peer, piece, offset);
