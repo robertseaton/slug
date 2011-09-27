@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 
 /* start forward declarations */
 struct Piece;
@@ -15,6 +16,7 @@ struct Peer;
 /* end forward declarations */
 
 struct QueueObject {
+     time_t begin_time;
      struct Peer* peer;
      struct Piece* piece;
 };
@@ -50,6 +52,7 @@ struct Piece {
      uint64_t amount_requested;
      uint64_t rarity;
      unsigned char sha1[20];
+     uint8_t subpiece_bitfield[32];
      enum {
           Need,
           Queued,
@@ -72,6 +75,7 @@ struct Peer {
      uint64_t message_length;
      uint64_t amount_pending;
      uint64_t amount_downloaded;
+     uint64_t speed;
      time_t started;
      unsigned char* message;
      unsigned char* bitfield;
@@ -123,16 +127,17 @@ struct BEncode {
 };
 
 #define PORT 6784
-#define DEFAULT_ANNOUNCE 1800
-#define SCHEDULE_INTERVAL 1
-#define INTEREST_INTERVAL 10
-#define REQUEST_LENGTH 16384
-#define QUEUE_SIZE 4
+#define DEFAULT_ANNOUNCE    1800
+#define CALC_SPEED_INTERVAL 5
+#define SCHEDULE_INTERVAL   1
+#define INTEREST_INTERVAL   10
+#define REQUEST_LENGTH      16384
+#define QUEUE_SIZE          4
 
-#define STARTED 0
-#define STOPPED 1
-#define COMPLETED 2
-#define VOID    8
+#define STARTED             0
+#define STOPPED             1
+#define COMPLETED           2
+#define VOID                8
 /* tstate identifiers for peer */
 #define CHOKED          (1 << 0)
 #define INTERESTED      (1 << 1)
@@ -181,7 +186,10 @@ int verify_piece(void*, uint64_t, unsigned char*);
 int has_piece(struct Piece*, struct Peer*);
 
 /* from scheduler.c */
+void calculate_speed(struct Torrent*, struct event_base*);
+void update_interest (struct Torrent*, struct event_base*);
 void schedule(struct Torrent*, struct event_base*);
+void unqueue(struct Piece*, struct QueueObject**);
 
 /* from torrent.c */
 void start_torrent(char*, double, double);
@@ -193,4 +201,7 @@ char* construct_url(struct Torrent*, int8_t);
 void error(char*);
 struct BEncode* find_value(char* key, struct BDictNode* d);
 void freeBEncode(struct BEncode*);
+#ifdef DEBUG
+void write_incorrect_piece(void*, uint32_t, uint32_t);
+#endif
 #endif

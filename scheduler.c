@@ -15,7 +15,7 @@ int rarest (const void* x, const void* y)
 }
 
 /* check if a peer is already in our queue */
-int8_t in_queue (struct Torrent* t, struct Peer* p)
+int8_t peer_in_queue (struct Torrent* t, struct Peer* p)
 {
      int i;
      for (i = 0; i < QUEUE_SIZE; i++) {
@@ -24,6 +24,28 @@ int8_t in_queue (struct Torrent* t, struct Peer* p)
      }
      
      return 0;
+}
+
+int8_t piece_in_queue (struct Torrent* t, struct Piece* p)
+{
+     int i;
+     for (i = 0; i < QUEUE_SIZE; i++) {
+          if (t->download_queue[i] != NULL && t->download_queue[i]->piece == p)
+               return 1;
+     }
+     
+     return 0;
+}
+
+int8_t expired (struct QueueObject* qo) 
+{
+     if (time(NULL) - qo->begin_time > 50) {
+          qo->peer->state = Dead;
+          qo->piece->state = Need;
+          qo->piece->amount_downloaded = 0;
+          return 1;
+     } else
+          return 0;
 }
 
 struct QueueObject* get_rarest_unchoked (struct Torrent* t)
@@ -35,14 +57,16 @@ struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 
      int i;
      for (i = 0; i < t->num_pieces; i++) {
-          while (pn != NULL && t->pieces[24].state == Need) {
-               if (!t->have_bitfield[t->pieces[24].index] && 
-                   has_piece(&t->pieces[24], pn->cargo) && 
+          while (pn != NULL) {
+               if (!t->have_bitfield[t->pieces[4].index] && 
+                   has_piece(&t->pieces[4], pn->cargo) && 
                    !pn->cargo->tstate.peer_choking &&
-                   !in_queue(t, pn->cargo)) {
-                    t->pieces[24].state = Queued;
+                   !peer_in_queue(t, pn->cargo) &&
+                   !piece_in_queue(t, &t->pieces[4]) &&
+                    pn->cargo->state != Dead) {
+                    t->pieces[4].state = Queued;
                     qo->peer = pn->cargo;
-                    qo->piece = &t->pieces[24];
+                    qo->piece = &t->pieces[4];
 
                     return qo;
                } else
@@ -60,8 +84,31 @@ void build_queue (struct Torrent* t)
 {
      int i;
      for (i = 0; i < QUEUE_SIZE; i++)
-          if (t->download_queue[i] == NULL || t->download_queue[i]->piece->state == Have)
+          if (t->download_queue[i] == NULL || 
+              t->download_queue[i]->piece->state == Have || 
+              expired(t->download_queue[i]))
                t->download_queue[i] = get_rarest_unchoked(t);
+}
+
+void __calculate_speed (evutil_socket_t fd, short what, void* arg)
+{
+     struct Torrent* t = arg;
+     struct PeerNode* head = t->peer_list;
+
+     while (head != NULL) {
+          head->cargo->speed = head->cargo->amount_downloaded / CALC_SPEED_INTERVAL;
+          head->cargo->amount_downloaded = 0;
+          head = head->next;
+     }
+}
+
+void calculate_speed (struct Torrent* t, struct event_base* base)
+{
+     struct event* calc_speed_ev;
+     struct timeval calc_speed_interval = {CALC_SPEED_INTERVAL, 0};
+     
+     calc_speed_ev = event_new(base, -1, EV_PERSIST, __calculate_speed, t);
+     evtimer_add(calc_speed_ev, &calc_speed_interval);
 }
 
 void __schedule (evutil_socket_t fd, short what, void* arg)
@@ -76,8 +123,19 @@ void __schedule (evutil_socket_t fd, short what, void* arg)
      
      build_queue(t);
      for (i = 0; i < QUEUE_SIZE; i++)
-          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state == Queued)
+          if (t->download_queue[i] != NULL && t->download_queue[i]->piece->state == Queued) {
                download_piece(t->download_queue[i]->piece, t->download_queue[i]->peer);
+               t->download_queue[i]->begin_time = time(NULL);
+          }
+}
+
+void schedule (struct Torrent* t, struct event_base* base)
+{
+     struct event* schedule_ev;
+     struct timeval schedule_interval = {SCHEDULE_INTERVAL, 0};
+     
+     schedule_ev = event_new(base, -1, EV_PERSIST, __schedule, t);
+     evtimer_add(schedule_ev, &schedule_interval);
 }
 
 void __interest (evutil_socket_t fd, short what, void* arg)
@@ -98,15 +156,6 @@ void __interest (evutil_socket_t fd, short what, void* arg)
      }
 }
 
-void schedule (struct Torrent* t, struct event_base* base)
-{
-     struct event* schedule_ev;
-     struct timeval schedule_interval = {SCHEDULE_INTERVAL, 0};
-     
-     schedule_ev = event_new(base, -1, EV_PERSIST, __schedule, t);
-     evtimer_add(schedule_ev, &schedule_interval);
-}
-
 void update_interest (struct Torrent* t, struct event_base* base)
 {
      struct event* interest_ev;
@@ -114,4 +163,17 @@ void update_interest (struct Torrent* t, struct event_base* base)
 
      interest_ev = event_new(base, -1, EV_PERSIST, __interest, t);
      evtimer_add(interest_ev, &interest_interval);
+}
+
+void unqueue (struct Piece* piece, struct QueueObject** queue)
+{
+     piece->amount_downloaded = 0;
+
+     int i;
+     for (i = 0; i < QUEUE_SIZE; i++)
+          if (queue[i] != NULL && piece->index == queue[i]->piece->index) {
+               printf("Unqueued piece #%lu\n", piece->index);
+               queue[i] = NULL;
+               piece->state = Need;
+          }
 }

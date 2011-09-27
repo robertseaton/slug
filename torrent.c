@@ -40,6 +40,7 @@ void start_torrent (char* file, double peer_id, double port)
      announce(t, STARTED, connection, base);
      init_connections(t->peer_list, handshake, base);
      update_interest(t, base);
+     calculate_speed(t, base);
      schedule(t, base);
      event_base_dispatch(base);
      free_torrent(t);

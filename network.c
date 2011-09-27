@@ -48,41 +48,68 @@ void handle_piece (struct Peer* p)
      
      memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
      p->torrent->pieces[index].amount_downloaded += REQUEST_LENGTH;
-
+     printf("Amount downloaded: %lu\n", p->torrent->pieces[index].amount_downloaded);
      if (p->torrent->pieces[index].amount_downloaded >= p->torrent->piece_length)
           if (verify_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, p->torrent->pieces[index].sha1)) {
                printf("Successfully downloaded piece: #%d\n", index);
                p->torrent->pieces[index].state = Have;
                have(&p->torrent->pieces[index], p->torrent->peer_list, p->torrent->have_bitfield);
           } else {
-               printf("Failed to verify piece: #%d\n, length: %llu", index, length);
-               //unqueue(&peer->torrent->pieces[index]);
-               p->torrent->pieces[index].state = Need;
-               p->torrent->pieces[index].amount_downloaded = 0;
+               printf("Failed to verify piece: #%d\n", index);
+               write_incorrect_piece(p->torrent->mmap + index * p->torrent->piece_length, p->torrent->piece_length, index);
+               unqueue(&p->torrent->pieces[index], p->torrent->download_queue);
           }
 }
 
 void get_msg (struct bufferevent* bufev, struct Peer* p)
 {
      uint64_t amount_read = p->message_length - p->amount_pending;
-     int64_t message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
+     int64_t message_length;
+     uint32_t index, off;
+
+     if (p->message_length == 16393 && p->amount_pending < 16395 - 9) {
+          memcpy(&index, &p->message[1], sizeof(index));
+          memcpy(&off, &p->message[5], sizeof(off));
+          index = ntohl(index);
+          off = ntohl(off);
      
+
+          message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
+
+#ifdef DEBUG
+          printf("READ: %ld bytes of piece #%u (subpiece: #%u of %lu) from peer %s at %lu. Next: %lu\n", 
+                 message_length, 
+                 index, 
+                 off / REQUEST_LENGTH,
+                 p->torrent->piece_length / REQUEST_LENGTH,
+                 inet_ntoa(p->addr.sin_addr), 
+                 amount_read,
+                 amount_read + message_length);
+#endif
+     } else
+          message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
+
      /* possible bufferevent_read found nothing */
      if (message_length < 0)
           message_length = 0;
 
      p->amount_pending = p->amount_pending - message_length;
-     
-     if (p->amount_pending > 0)
-          p->state = HavePartialMessage;
-     else
+     p->amount_downloaded += message_length;
+
+     if (p->amount_pending == 0) {
           p->state = HaveMessage;
+          if (p->message_length == 16393)
+               p->torrent->pieces[index].subpiece_bitfield[off / REQUEST_LENGTH] = 1;
+     } else if (p->amount_pending > 0)
+          p->state = HavePartialMessage;
+
 }
 
 void read_prefix (struct bufferevent* bufev, struct Peer* p)
 {
      if (p->message != NULL)
           free(p->message); /* free old message */
+
 #define PREFIX_LEN 4
      p->amount_pending = PREFIX_LEN;
      p->message_length = PREFIX_LEN;
@@ -96,7 +123,7 @@ void read_prefix (struct bufferevent* bufev, struct Peer* p)
      p->amount_pending = p->amount_pending - message_length;
 
      if (p->amount_pending > 0)
-          printf("Read partial prefix!\n");
+          error("ERROR: Read partial prefix!\n");
 }
 
 void get_prefix (struct bufferevent* bufev, struct Peer* p)
@@ -190,7 +217,7 @@ void parse_msg (struct Peer* p)
 void handle_peer_response (struct bufferevent* bufev, void* payload)
 {
      struct Peer* p = payload;
-
+     
      if (p->state == Handshaking) {
           p->message = malloc(sizeof(unsigned char) * p->message_length);
           get_msg(bufev, p);

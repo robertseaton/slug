@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <sys/wait.h>
 #include "includes.h"
 
 void free_pieces (struct Piece* pieces, uint64_t num_pieces)
@@ -18,6 +18,9 @@ void init_piece (struct Piece* p, uint64_t index)
      p->rarity = 0;
      p->state = Need;
      p->rarity = 0;
+     int i;
+     for (i = 0; i < 32; i++)
+          p->subpiece_bitfield[i] = 0;
 }
 
 void download_piece (struct Piece* piece, struct Peer* peer)
@@ -37,8 +40,9 @@ void download_piece (struct Piece* piece, struct Peer* peer)
 int verify_piece (void* addr, uint64_t piece_length, unsigned char* piece_sha)
 {
      SHA_CTX sha;
+     SHA_CTX sha2;
      unsigned char sha1result[20];
-     
+
      SHA1_Init(&sha);
      SHA1_Update(&sha, addr, piece_length);
      SHA1_Final(sha1result, &sha);
