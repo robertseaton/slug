@@ -22,7 +22,6 @@
  # OF THE POSSIBILITY OF SUCH DAMAGE.
  # # #
 
-CC = clang
 CFLAGS = -O0 -g -pipe -Wall -DDEBUG
 objects = announce.o bitfield.o main.o metadata.o network.o parser.o priority_queue.o peer.o piece.o scheduler.o torrent.o url.o util.o
 includes = -I. -lm -lcurl -levent -lcrypto
