@@ -6,7 +6,8 @@
 
 #include "includes.h"
 
-struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
+struct Peer* 
+init_peer (char* addr, char* port, struct Torrent* t)
 {
      struct Peer* p = malloc(sizeof(struct Peer));
      memcpy((void *) &p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
@@ -23,16 +24,19 @@ struct Peer* init_peer (char* addr, char* port, struct Torrent* t)
      return p;
 }
 
-struct PeerNode* init_peer_node (struct Peer* cargo, struct PeerNode* next)
+struct PeerNode* 
+init_peer_node (struct Peer* cargo, struct PeerNode* next)
 {
      struct PeerNode* pn = malloc(sizeof(struct PeerNode));
+
      pn->cargo = cargo;
      pn->next = next;
      
      return pn;
 }
 
-void add_peer (struct PeerNode* current, struct Peer* peer)
+void 
+add_peer (struct PeerNode* current, struct Peer* peer)
 {
      while (current != NULL) {
           if (current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr)
@@ -46,7 +50,8 @@ void add_peer (struct PeerNode* current, struct Peer* peer)
      current = init_peer_node(peer, NULL);
 }
 
-void add_peers (struct Torrent* t, struct PeerNode* peer_list)
+void 
+add_peers (struct Torrent* t, struct PeerNode* peer_list)
 {
      /* possible this is called from the first announce */
      if (t->peer_list == NULL) {
@@ -63,7 +68,8 @@ void add_peers (struct Torrent* t, struct PeerNode* peer_list)
      t->peer_list = first;
 }
 
-struct PeerNode* find_unchoked (struct PeerNode* head, uint64_t index)
+struct PeerNode* 
+find_unchoked (struct PeerNode* head, uint64_t index)
 {
      struct PeerNode* unchoked_peers = NULL;
      struct PeerNode* unchoked_head = unchoked_peers;
@@ -88,7 +94,8 @@ struct PeerNode* find_unchoked (struct PeerNode* head, uint64_t index)
 }
 
 /* check if all the peers with a piece are choking us */
-uint8_t all_choked (struct PeerNode* head, uint64_t index)
+uint8_t 
+all_choked (struct PeerNode* head, uint64_t index)
 {
      struct PeerNode* unchoked_peers = find_unchoked(head, index);
 
@@ -98,7 +105,8 @@ uint8_t all_choked (struct PeerNode* head, uint64_t index)
           return 1;
 }
 
-void unchoke (struct Peer* p)
+void 
+unchoke (struct Peer* p)
 {
      uint32_t unchoke_prefix = htonl(1);
      uint8_t unchoke_id = 1;
@@ -108,7 +116,8 @@ void unchoke (struct Peer* p)
      p->tstate.choked = 0;
 }
 
-void interested (struct Peer* p)
+void 
+interested (struct Peer* p)
 {
      uint32_t interested_prefix = htonl(1);
      uint8_t interested_id = 2;
@@ -118,7 +127,8 @@ void interested (struct Peer* p)
      p->tstate.interested = 1;
 }
 
-void not_interested (struct Peer* p)
+void 
+not_interested (struct Peer* p)
 {
      uint32_t not_interested_prefix = htonl(1);
      uint8_t not_interested_id = 3;
@@ -128,7 +138,8 @@ void not_interested (struct Peer* p)
      p->tstate.interested = 0;
 }
 
-void request (struct Peer* peer, struct Piece* piece, off_t off)
+void 
+request (struct Peer* peer, struct Piece* piece, off_t off)
 {
      uint32_t request_prefix = htonl(13);
      uint8_t request_id = 6;
@@ -148,7 +159,8 @@ void request (struct Peer* peer, struct Piece* piece, off_t off)
 #endif
 }
 
-void have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
+void 
+have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
 {
      uint32_t have_prefix = htonl(5);
      uint8_t have_id = 4;
@@ -165,7 +177,8 @@ void have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
      have_bitfield[piece->index] = 1;
 }
 
-int8_t has_needed_piece (unsigned char* peer_bitfield, char* host_bitfield, uint64_t num_pieces)
+int8_t 
+has_needed_piece (uint8_t* peer_bitfield, char* host_bitfield, uint64_t num_pieces)
 {
      /* possible the bitfield hasn't been initialized yet */
      if (peer_bitfield == NULL)

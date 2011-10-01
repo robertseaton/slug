@@ -5,13 +5,14 @@
 #include "includes.h"
 
 /* parses a bitfield message into a bitfield data structure */
-unsigned char* init_bitfield (uint64_t num_pieces, unsigned char* message)
+uint8_t* 
+init_bitfield (uint64_t num_pieces, uint8_t* message)
 {
      /* never malloc 0 */
      if (num_pieces == 0)
           error("Failed to initialize peer's bitfield.");
 
-     unsigned char* bitfield;
+     uint8_t* bitfield;
      bitfield = malloc(num_pieces);
 
      uint32_t i, j;
@@ -27,7 +28,8 @@ unsigned char* init_bitfield (uint64_t num_pieces, unsigned char* message)
 }
 
 /* allocates and initializes a global bitfield */
-uint64_t* init_global_bitfield (uint64_t num_pieces)
+uint64_t* 
+init_global_bitfield (uint64_t num_pieces)
 {
      /* never malloc 0 */
      if (num_pieces == 0)
@@ -43,7 +45,8 @@ uint64_t* init_global_bitfield (uint64_t num_pieces)
 }
 
 /* allocates and initializes a bitfield of the pieces we have */
-char* init_have_bitfield (uint64_t num_pieces)
+char* 
+init_have_bitfield (uint64_t num_pieces)
 {
 
      /* never malloc 0 */
@@ -60,7 +63,8 @@ char* init_have_bitfield (uint64_t num_pieces)
 }
 
 /* updates a bitfield with new information provided by a have message */
-void update_bitfield (unsigned char* message, uint64_t* global_bitfield, unsigned char* bitfield)
+void 
+update_bitfield (uint8_t* message, uint64_t* global_bitfield, uint8_t* bitfield)
 {
      uint32_t have;
      
@@ -75,7 +79,8 @@ void update_bitfield (unsigned char* message, uint64_t* global_bitfield, unsigne
 }
 
 /* updates a global bitfield with information from a peer's bitfield */
-void update_global_bitfield (uint64_t num_pieces, char* bitfield, uint64_t* global_bitfield)
+void 
+update_global_bitfield (uint64_t num_pieces, char* bitfield, uint64_t* global_bitfield)
 {
      uint64_t i;
      for (i = 0; i < num_pieces; i++)

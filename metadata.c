@@ -9,7 +9,8 @@
 #include "includes.h"
 
 /* takes a metadata BEncoded dictionary and returns the url */ 
-char* get_url (struct BDictNode* b)
+char* 
+get_url (struct BDictNode* b)
 {
      char* url;
      char input_key[9] = "announce";
@@ -26,7 +27,8 @@ char* get_url (struct BDictNode* b)
 }
 
 /* takes a dictionary of BEncoded metadata and returns the piece length */
-uint64_t get_piece_length (struct BDictNode* b)
+uint64_t 
+get_piece_length (struct BDictNode* b)
 {
      char input_key[13] = "piece length";
      struct BEncode* output_value = find_value(input_key, b);
@@ -39,7 +41,8 @@ uint64_t get_piece_length (struct BDictNode* b)
 }
 
 /* takes the metadata as a string and returns the pieces */
-void get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
+void 
+get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
 {
      char* j;
      *num_pieces = 0;
@@ -79,7 +82,8 @@ void get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
 }
 
 /* takes a BEncoded metadata dictionary and returns 1 if private, 0 otherwise */
-int is_private (struct BDictNode* b)
+uint8_t
+is_private (struct BDictNode* b)
 {
      char input_key[8] = "private";
      struct BEncode* output_value = find_value(input_key, b);
@@ -90,7 +94,8 @@ int is_private (struct BDictNode* b)
           return 0;
 }
 
-char* get_name (struct BDictNode* b)
+char* 
+get_name (struct BDictNode* b)
 {
      char* name;
      char input_key[5] = "name";
@@ -106,7 +111,8 @@ char* get_name (struct BDictNode* b)
      return name;
 }
 
-uint64_t get_length (struct BDictNode* b)
+uint64_t 
+get_length (struct BDictNode* b)
 {
      char input_key[7] = "length";
      struct BEncode* output_value = find_value(input_key, b);
@@ -117,7 +123,8 @@ uint64_t get_length (struct BDictNode* b)
           return output_value->cargo.bInt;
 }
 
-char* get_path (struct BDictNode* b)
+char* 
+get_path (struct BDictNode* b)
 {
      char* path;
      char input_key[5] = "path";
@@ -156,7 +163,8 @@ char* get_path (struct BDictNode* b)
 }
 
 /* checks if a torrent is a single file torrent from the metadata */
-int is_single_file_torrent (char* data)
+uint8_t
+is_single_file_torrent (char* data)
 {
      /* only multi-file metadata dictions contain the files key */
 
@@ -167,13 +175,14 @@ int is_single_file_torrent (char* data)
 }
 
 /* returns the SHA1 hash of the info dictionary */
-unsigned char* get_info_hash (char* data)
+uint8_t* 
+get_info_hash (char* data)
 {
      SHA_CTX sha;
      int64_t i = 0;
      char* j;
-     unsigned char* info_hash;
-     info_hash = malloc(sizeof(unsigned char) * 20);
+     uint8_t* info_hash;
+     info_hash = malloc(sizeof(uint8_t) * 20);
 
 #define INFO_STR "4:info"
      j = strstr(data, INFO_STR);
@@ -192,7 +201,8 @@ unsigned char* get_info_hash (char* data)
 }
 
 /* returns the randomly generated peerID for the torrent */
-char* set_peer_id (double rand)
+char* 
+set_peer_id (double rand)
 {
      static char peer_id[20];
      strcpy(peer_id, "SL");
@@ -202,7 +212,8 @@ char* set_peer_id (double rand)
      return peer_id;
 }
 
-struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
+struct Torrent* 
+init_torrent (FILE* stream, double peer_id, double port)
 {
      /* struct Torrent tmp; */
      static struct Torrent t;
@@ -220,7 +231,8 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
 
      if (bEncodedDict->type == BDict) {
           char input_key[5] = "info";
-          struct BEncode* output_value = find_value(input_key, bEncodedDict->cargo.bDict);
+          struct BEncode* output_value;
+          output_value = find_value(input_key, bEncodedDict->cargo.bDict);
 
           if (output_value == NULL || output_value->type != BDict)
                error("Failed to get torrent's metadata.");
@@ -231,7 +243,7 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           t.piece_length = get_piece_length(output_value->cargo.bDict);
           get_pieces(&t.pieces, &t.num_pieces, data);
           t.url = get_url(bEncodedDict->cargo.bDict);
-          t.info_hash = (unsigned char *)get_info_hash(data);
+          t.info_hash = (uint8_t *)get_info_hash(data);
           t.peer_id = set_peer_id(peer_id);
           t.port = port;
           t.compact = 1;
@@ -247,7 +259,12 @@ struct Torrent* init_torrent (FILE* stream, double peer_id, double port)
           fseek(t.file, t.length - 1, SEEK_SET);
           write(fileno(t.file), "", 1);
 
-          t.mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(t.file), 0);
+          t.mmap = mmap(0, 
+                        t.length, 
+                        PROT_READ | PROT_WRITE, 
+                        MAP_SHARED, 
+                        fileno(t.file), 
+                        0);
 
           int i;
           for (i = 0; i < QUEUE_SIZE; i++)

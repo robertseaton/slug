@@ -10,14 +10,15 @@
 
 #define RANDOM_MAX 9999999999999
 
-int main () {
+int 
+main () {
 
      /* house keeping */
      srandom(time(NULL));
      curl_global_init(CURL_GLOBAL_ALL);
      double peer_id = rand() % RANDOM_MAX + pow(10, 13);
      mkdir("/tmp/slug", S_IRWXU);
-     signal(SIGPIPE, SIG_IGN);
+     signal(SIGPIPE, SIG_IGN); /* TODO: remove this hack */
 
      start_torrent("ubuntu.torrent", peer_id, PORT);
      return 0;

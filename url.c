@@ -4,25 +4,32 @@
 
 #include "includes.h"
 
-char from_hex (char c)
+char 
+from_hex (char c)
 {
      return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
 }
 
-char to_hex (char h)
+char 
+to_hex (char h)
 {
      static char hex[] = "0123456789abcdef";
      return hex[h & 15];
 }
 
-char* encode_url (char* s, char* end)
+char* 
+encode_url (char* s, char* end)
 {
      char* str_pt = s;
      char* buffer = malloc(strlen(s) * 4 + 1);
      char* buffer_pt = buffer;
 
      while (str_pt <= end) {
-          if (isalnum(*str_pt) || *str_pt == '-' || *str_pt == '_' || *str_pt == '.' || *str_pt == '~')
+          if (isalnum(*str_pt) || 
+              *str_pt == '-'   || 
+              *str_pt == '_'   || 
+              *str_pt == '.'   || 
+              *str_pt == '~')
                *buffer_pt++ = *str_pt;
           else if (*str_pt == ' ')
                *buffer_pt++ = '+';
@@ -39,7 +46,8 @@ char* encode_url (char* s, char* end)
 }
 
 
-char* construct_url (struct Torrent* t, int8_t event)
+char* 
+construct_url (struct Torrent* t, int8_t event)
 {
      char* peer_id = encode_url(t->peer_id, &t->peer_id[19]);
      char* info_hash = encode_url((char *)t->info_hash, (char *)&t->info_hash[19]);

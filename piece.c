@@ -5,12 +5,14 @@
 #include <sys/wait.h>
 #include "includes.h"
 
-void free_pieces (struct Piece* pieces, uint64_t num_pieces)
+void 
+free_pieces (struct Piece* pieces, uint64_t num_pieces)
 {
      free(pieces);
 }
 
-void init_piece (struct Piece* p, uint64_t index)
+void 
+init_piece (struct Piece* p, uint64_t index)
 {
      p->index = index;
      p->amount_downloaded = 0;
@@ -23,7 +25,8 @@ void init_piece (struct Piece* p, uint64_t index)
           p->subpiece_bitfield[i] = 0;
 }
 
-void download_piece (struct Piece* piece, struct Peer* peer)
+void 
+download_piece (struct Piece* piece, struct Peer* peer)
 {
      uint64_t offset = 0;
      piece->amount_requested = 0;
@@ -37,23 +40,28 @@ void download_piece (struct Piece* piece, struct Peer* peer)
      }
 }
 
-int verify_piece (void* addr, uint64_t piece_length, unsigned char* piece_sha)
+uint8_t 
+verify_piece (void* addr, uint64_t piece_length, uint8_t* piece_sha)
 {
      SHA_CTX sha;
-     SHA_CTX sha2;
-     unsigned char sha1result[20];
+     uint8_t sha1result[20];
 
      SHA1_Init(&sha);
      SHA1_Update(&sha, addr, piece_length);
      SHA1_Final(sha1result, &sha);
 
-     if (strncmp((char *) sha1result, (char *) piece_sha, 20))
+     if (memcmp(sha1result, piece_sha, 20)) {
+          printf("Expected: ");
+          print_sha1(piece_sha);
+          printf("Received: ");
+          print_sha1(sha1result);
           return 0;
-     else
+     } else
           return 1;
 }
 
-int has_piece (struct Piece* piece, struct Peer* peer)
+uint8_t 
+has_piece (struct Piece* piece, struct Peer* peer)
 {
      if (peer->bitfield == NULL)
           return 0;

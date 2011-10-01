@@ -17,8 +17,16 @@ struct Peer;
 
 struct QueueObject {
      time_t begin_time;
+     uint64_t priority;
      struct Peer* peer;
      struct Piece* piece;
+};
+
+/* priority queue is implemented as a binary heap */
+struct MinBinaryHeap {
+     uint64_t heap_size;
+     uint64_t max_elements;
+     struct QueueObject* elements;
 };
 
 struct Torrent {
@@ -27,7 +35,7 @@ struct Torrent {
      char* tracker_id;
      char* url;
      char* have_bitfield;
-     unsigned char* info_hash;
+     uint8_t* info_hash;
      uint64_t length;
      uint64_t piece_length;
      uint64_t num_pieces;
@@ -51,7 +59,7 @@ struct Piece {
      uint64_t amount_downloaded;
      uint64_t amount_requested;
      uint64_t rarity;
-     unsigned char sha1[20];
+     uint8_t sha1[20];
      uint8_t subpiece_bitfield[32];
      enum {
           Need,
@@ -77,8 +85,8 @@ struct Peer {
      uint64_t amount_downloaded;
      uint64_t speed;
      time_t started;
-     unsigned char* message;
-     unsigned char* bitfield;
+     uint8_t* message;
+     uint8_t* bitfield;
      struct State tstate;
      struct Torrent* torrent;
      enum {
@@ -150,17 +158,17 @@ struct BEncode {
 void announce(struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* from bitfield.c */
-unsigned char* init_bitfield(uint64_t, unsigned char*);
+uint8_t* init_bitfield(uint64_t, uint8_t*);
 uint64_t* init_global_bitfield(uint64_t);
 char* init_have_bitfield(uint64_t);
-void update_bitfield(unsigned char*, uint64_t*, unsigned char*);
+void update_bitfield(uint8_t*, uint64_t*, uint8_t*);
 void update_global_bitfield(uint64_t, char*, uint64_t*);
 
 /* from metadata.c */
 struct Torrent* init_torrent(FILE*, double, double);
 
 /* from network.c */
-void init_connections(struct PeerNode*, unsigned char*, struct event_base*);
+void init_connections(struct PeerNode*, uint8_t*, struct event_base*);
 
 /* from parser.c */
 struct BEncode* parseBEncode(char*, int64_t*);
@@ -176,14 +184,14 @@ void interested(struct Peer*);
 void not_interested(struct Peer*);
 void request(struct Peer*, struct Piece*, off_t);
 void have(struct Piece*, struct PeerNode*, char*);
-int8_t has_needed_piece(unsigned char*, char*, uint64_t);
+int8_t has_needed_piece(uint8_t*, char*, uint64_t);
 
 /* from piece.c */
 void init_piece(struct Piece*, uint64_t);
 void free_pieces(struct Piece*, uint64_t);
 void download_piece(struct Piece*, struct Peer*);
-int verify_piece(void*, uint64_t, unsigned char*);
-int has_piece(struct Piece*, struct Peer*);
+uint8_t verify_piece(void*, uint64_t, uint8_t*);
+uint8_t has_piece(struct Piece*, struct Peer*);
 
 /* from scheduler.c */
 void calculate_speed(struct Torrent*, struct event_base*);
@@ -199,8 +207,9 @@ char* construct_url(struct Torrent*, int8_t);
 
 /* from util.c */
 void error(char*);
-struct BEncode* find_value(char* key, struct BDictNode* d);
+struct BEncode* find_value(char*, struct BDictNode*);
 void freeBEncode(struct BEncode*);
+void print_sha1(uint8_t*);
 #ifdef DEBUG
 void write_incorrect_piece(void*, uint32_t, uint32_t);
 #endif

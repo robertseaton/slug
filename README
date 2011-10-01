@@ -1,16 +1,16 @@
 Slug is an (incomplete) scriptable BitTorrent daemon for Unix-like systems.
 
-I decided to create Slug because I am fed up with the lackluster automation tools offered by other BitTorrent clients. I wanted a client that exposed a simple API combined with pattern matching which would allow an individual to write powerful pre- and post-hooks to be executed when a torrent that matches a pattern is started or finished.
+I decided to create Slug because I'm fed up with the lackluster automation tools offered by other BitTorrent clients. I wanted a client that exposed a simple API combined with pattern matching which would allow an individual to write powerful pre- and post-hooks to be executed when a torrent that matches a pattern is started or finished.
 
-Example usages:
+Example usages/features:
 
 * Downloading every torrent from an RSS feed and then moving it to another folder automatically.
 * Moving a torrent to a specific folder based on a pattern, like moving torrents that match the regex "*[Ll]ost*" to "/tv/lost".
-* Automatically unraring a torrent and moving the unrared file to a file.
+* Automatically unraring a torrent and moving the unrared file(s) to a folder.
 * Contacting a metadata server and renaming a torrent based on the metadata recieved from the server.
-* Schedule specific hours during which Slug should run.
-* Stop a torrent after a certain amount of time or once it has seeded to a certain ratio.
+* Scheduling specific hours during which Slug should run.
+* Stopping a torrent after a certain amount of time or once it has seeded to a certain ratio.
 
-All of these things will be possible with Slug and, most importantly, they won't stop the torrents from seeding, even after being renamed. This will be accomplished by embedding Lua as a scripting language inside of Slug and allowing users to write "rule files" to complete tasks. Slug's configuration will be exposed via a default rule file.
+All of these things will be possible with Slug and, most importantly, they won't stop the torrents from seeding -- even after being renamed, etc. This will be accomplished by embedding Lua for use as a scripting language inside of Slug and allowing users to write "rule files" to complete tasks. Slug's configuration will be exposed via a default rule file.
 
 Slug, by itself, will not have a GUI but -- once I finish Slug -- I intend to write a user-friendly WebUI that can optionally be used alongside Slug. This will expose actions such as pausing and removing torrents and make torrent management a breeze, even when dealing with thousands of torrents. Ideally, you will be able to think of Slug's webUI as an even better version of Rutorrent.

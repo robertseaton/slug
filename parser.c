@@ -3,7 +3,8 @@
 
 #include "includes.h"
 
-struct BEncode* initBInt (int64_t i)
+struct BEncode* 
+initBInt (int64_t i)
 {
      struct BEncode* b = malloc(sizeof(struct BEncode));
      b->type = BInt;
@@ -12,7 +13,8 @@ struct BEncode* initBInt (int64_t i)
      return b;
 }
 
-struct BEncode* initBList (struct BListNode* l)
+struct BEncode* 
+initBList (struct BListNode* l)
 {
      struct BEncode* b = malloc(sizeof(struct BEncode));
      b->type = BList;
@@ -21,7 +23,8 @@ struct BEncode* initBList (struct BListNode* l)
      return b;
 }
 
-struct BEncode* initBString (char* s)
+struct BEncode* 
+initBString (char* s)
 {
      struct BEncode* b = malloc(sizeof(struct BEncode));
      b->type = BString;
@@ -30,7 +33,8 @@ struct BEncode* initBString (char* s)
      return b;
 }
 
-struct BEncode* initBDict (struct BDictNode* d)
+struct BEncode* 
+initBDict (struct BDictNode* d)
 {
      struct BEncode* b = malloc(sizeof(struct BEncode));
      b->type = BDict;
@@ -39,7 +43,8 @@ struct BEncode* initBDict (struct BDictNode* d)
      return b;
 }
 
-struct BEncode* parseBInt (char* data, int64_t* position)
+struct BEncode* 
+parseBInt (char* data, int64_t* position)
 {
      int64_t i = 0;
 
@@ -55,7 +60,8 @@ struct BEncode* parseBInt (char* data, int64_t* position)
      return initBInt(i);
 }
 
-struct BEncode* parseBList (char* data, int64_t* position)
+struct BEncode* 
+parseBList (char* data, int64_t* position)
 {
     struct BListNode l;
     struct BListNode* pt = &l;
@@ -76,7 +82,8 @@ struct BEncode* parseBList (char* data, int64_t* position)
     return initBList(l.next);
 }
 
-struct BEncode* parseBString (char* data, int64_t* position)
+struct BEncode* 
+parseBString (char* data, int64_t* position)
 {
     int64_t l = 0;
     
@@ -97,7 +104,8 @@ struct BEncode* parseBString (char* data, int64_t* position)
     return initBString(s);
 }
 
-struct BEncode* parseBDict (char* data, int64_t* position)
+struct BEncode* 
+parseBDict (char* data, int64_t* position)
 {
      struct BDictNode d;
      struct BDictNode* pt = &d;
@@ -122,7 +130,8 @@ struct BEncode* parseBDict (char* data, int64_t* position)
      return initBDict(d.next);
 }
 
-struct BEncode* parseBEncode (char* data, int64_t* position)
+struct BEncode* 
+parseBEncode (char* data, int64_t* position)
 {
      switch (data[*position]) {
      case 'd':

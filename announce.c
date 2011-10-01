@@ -11,13 +11,8 @@
 
 #include "includes.h"
 
-struct args {
-     struct Torrent* t;
-     CURL* connection;
-     struct event_base* base;
-};
-
-int failed (struct BDictNode* b)
+int8_t 
+failed (struct BDictNode* b)
 {
      struct BEncode* output_value = find_value("failure reason", b);
      
@@ -27,13 +22,15 @@ int failed (struct BDictNode* b)
      return 0;
 }
 
-void pfailure_reason (struct BDictNode* b)
+void 
+pfailure_reason (struct BDictNode* b)
 {
      struct BEncode* output_value = find_value("failure reason", b);
      fprintf(stderr, "Announce failed: %s\n", output_value->cargo.bStr);
 }
 
-struct PeerNode* get_peers (struct Torrent* t, char* data)
+struct 
+PeerNode* get_peers (struct Torrent* t, char* data)
 {
      int64_t i = 0;
      char* j;
@@ -79,17 +76,21 @@ struct PeerNode* get_peers (struct Torrent* t, char* data)
      return first;
 }
 
-uint64_t get_interval (struct BDictNode* b)
+uint64_t 
+get_interval (struct BDictNode* b)
 {
      struct BEncode* output_value = find_value("interval", b);
      return output_value->cargo.bInt;
 }
 
-void __announce (evutil_socket_t fd, short what, void* arg)
+void 
+__announce (evutil_socket_t fd, short what, void* arg)
 {
+     /* TODO */
 }
 
-void announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* base)
+void 
+announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* base)
 {
      int32_t length = strlen(t->name) + strlen("/tmp/slug/-announce") + 1;
      char* filepath = malloc(length);
