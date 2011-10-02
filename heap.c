@@ -1,5 +1,3 @@
-/* min binary heap, holds pieces of torrent */
-
 #include <stdlib.h>
 #include "includes.h"
 
@@ -58,7 +56,7 @@ heap_min (struct MinBinaryHeap* pq)
 struct Piece 
 heap_extract_min (struct MinBinaryHeap* pq)
 {
-     struct QueueObject min;
+     struct Piece min;
      
      if (pq->heap_size >= 1) {
           min = pq->elements[1];
@@ -90,12 +88,9 @@ heap_insert (struct MinBinaryHeap* pq, struct Piece key)
 int8_t 
 heap_delete (struct MinBinaryHeap* pq, uint64_t i)
 {
-     struct Peer deleted;
-
      if (i < pq->heap_size || i < 1)
           return -1;
 
-     deleted = pq->elements[i];
      pq->elements[i] = pq->elements[(pq->heap_size)--];
 
      heapify(pq, i);
@@ -108,4 +103,16 @@ heap_initialize (struct MinBinaryHeap* pq, uint64_t i)
      pq->heap_size = 0;
      pq->max_elements = i;
      pq->elements = malloc(sizeof(struct Piece) * ((pq->max_elements) + 1));
+}
+
+struct Piece*
+find_by_index (struct MinBinaryHeap* pq, uint64_t index)
+{
+     uint64_t i;
+     for (i = 0; i < pq->heap_size; i++)
+          if (pq->elements[i].index == index)
+               return &(pq->elements[i]);
+
+     /* invalid index */
+     return NULL;
 }

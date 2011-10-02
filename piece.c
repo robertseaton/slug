@@ -17,9 +17,10 @@ init_piece (struct Piece* p, uint64_t index)
      p->index = index;
      p->amount_downloaded = 0;
      p->amount_requested = 0;
-     p->rarity = 0;
+     p->priority = 0;
      p->state = Need;
-     p->rarity = 0;
+     p->priority = 0;
+
      int i;
      for (i = 0; i < 32; i++)
           p->subpiece_bitfield[i] = 0;

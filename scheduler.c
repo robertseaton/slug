@@ -12,7 +12,7 @@ rarest (const void* x, const void* y)
      const struct Piece* a = (struct Piece *)x;
      const struct Piece* b = (struct Piece *)y;
 
-     return (a->rarity - b->rarity);
+     return (a->priority - b->priority);
 }
 
 /* check if a peer is already in our queue */
@@ -50,7 +50,7 @@ piece_in_queue (struct Torrent* t, struct Piece* p)
 int8_t 
 expired (struct QueueObject* qo) 
 {
-     if (time(NULL) - qo->begin_time > 50) {
+     if (time(NULL) - qo->started > 50) {
           qo->peer->state = Dead;
           qo->piece->state = Need;
           qo->piece->amount_downloaded = 0;
@@ -73,44 +73,18 @@ ready (struct Torrent* t, struct Piece piece, struct Peer* peer)
           return 0;
      
 }
-/*
-struct QueueObject* 
-get_rarest_unchoked (struct Torrent* t)
-{
-     struct QueueObject* qo = malloc(sizeof(struct QueueObject));
-     struct PeerNode* pn = t->peer_list;
-
-     int i;
-     for (i = 0; i < t->num_pieces; i++) {
-          while (pn != NULL) {
-               if (ready(t, t->pieces[i], pn->cargo)) {
-                    t->pieces[i].state = Queued;
-                    qo->peer = pn->cargo;
-                    qo->piece = &t->pieces[i];
-
-                    return qo;
-               } else
-                    pn = pn->next;
-          }
-          pn = t->peer_list;
-     }
-
-     / if we reach this far, we found no unchoked torrents /
-
-     return NULL;
-}
-*/
 
 struct QueueObject* get_rarest_unchoked (struct Torrent* t)
 {
      struct QueueObject* qo = malloc(sizeof(struct QueueObject));
      struct PeerNode* pn = t->peer_list;
-
+     struct Piece* piece; = find_by_index(t->peers)
      
 
      int i;
      for (i = 0; i < t->num_pieces; i++) {
           while (pn != NULL) {
+               piece = find_by_index(t->peers, i);
                if (!t->have_bitfield[t->pieces[i].index] &&
                    has_piece(&t->pieces[i], pn->cargo) &&
                    !pn->cargo->tstate.peer_choking &&

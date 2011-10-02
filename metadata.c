@@ -42,7 +42,7 @@ get_piece_length (struct BDictNode* b)
 
 /* takes the metadata as a string and returns the pieces */
 void 
-get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
+get_pieces (struct MinBinaryHeap* pieces, uint64_t* num_pieces, char* data)
 {
      char* j;
      *num_pieces = 0;
@@ -67,17 +67,19 @@ get_pieces (struct Piece** pieces, uint64_t* num_pieces, char* data)
      if (*num_pieces == 0)
           error("Parsing metadata returned an invalid number of pieces.");
 
-     *pieces = calloc(*num_pieces, sizeof(struct Piece));
+     heap_initialize(pieces, *num_pieces);
      
      uint64_t i;
      for (i = 0; i < *num_pieces; ++i) {
-          
+          struct Piece* piece = malloc(sizeof(struct Piece));
+
           uint64_t k;
           for (k = 0; k < CHARS_IN_PIECE; ++k) {
-               (*pieces)[i].sha1[k] = (*j); 
+               piece->sha1[k] = (*j); 
                j++;
           }
-          init_piece(&(*pieces)[i], i);
+          init_piece(piece, i);
+          heap_insert(pieces, *piece);
      }
 }
 
@@ -225,6 +227,9 @@ init_torrent (FILE* stream, double peer_id, double port)
 
      char* data = malloc(pos);
      fread(data, pos, 1, stream);
+
+     if (!is_single_file_torrent(data))
+          error("Sorry, slug only supports single file torrents for the time being!");
 
      int64_t x = 0;
      struct BEncode* bEncodedDict = parseBEncode(data, &x);
