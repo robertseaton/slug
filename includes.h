@@ -8,36 +8,29 @@
 #include <stdio.h>
 #include <time.h>
 
-#define PORT 6784
+#define PORT                6784
 #define DEFAULT_ANNOUNCE    1800
-#define CALC_SPEED_INTERVAL 5
 #define SCHEDULE_INTERVAL   1
 #define INTEREST_INTERVAL   10
+#define TIMEOUT_INTERVAL    10
+#define TIMEOUT             35
 #define REQUEST_LENGTH      16384
-#define QUEUE_SIZE          4
+#define PEER_PIPELINE_LEN   4
+#define MAX_ACTIVE_PEERS    4
 
 #define STARTED             0
 #define STOPPED             1
 #define COMPLETED           2
 #define VOID                8
-/* tstate identifiers for peer */
-#define CHOKED          (1 << 0)
-#define INTERESTED      (1 << 1)
-#define PEER_CHOKING    (1 << 2)
-#define PEER_INTERESTED (1 << 3)
-/* state identifiers for piece */
-#define NEED            (1 << 0)
 
 /* start forward declarations */
 struct Piece;
 struct BEncode;
-struct PeerNode;
 struct Peer;
-struct QueueObject;
 struct MinBinaryHeap;
 /* end forward declarations */
 
-/* priority queue is implemented as a min binary heap */
+/* pieces priority queue is implemented as a min binary heap */
 struct MinBinaryHeap {
      uint64_t heap_size;
      uint64_t max_elements;
@@ -64,19 +57,22 @@ struct Torrent {
      int8_t compact;
      void* mmap;
      FILE* file;
+     time_t started;
      struct MinBinaryHeap pieces;
+     struct MinBinaryHeap downloading;
      struct PeerNode* peer_list;
      struct PeerNode* unchoked_peers;
-     struct QueueObject* download_queue[4];
+     struct PeerNode* active_peers;
 };
 
 struct Piece {
+     uint64_t started;
      uint64_t index;
      uint64_t amount_downloaded;
      uint64_t amount_requested;
      uint64_t priority;
      uint8_t sha1[20];
-     uint8_t subpiece_bitfield[32];
+     struct Peer* downloading_from;
      enum {
           Need,
           Queued,
@@ -101,6 +97,7 @@ struct Peer {
      uint64_t amount_downloaded;
      uint64_t speed;
      time_t started;
+     uint8_t pieces_requested;
      uint8_t* message;
      uint8_t* bitfield;
      struct State tstate;
@@ -116,15 +113,10 @@ struct Peer {
      } state;
 };
 
+/* simple linked list */
 struct PeerNode {
      struct Peer* cargo;
      struct PeerNode* next;
-};
-
-struct QueueObject {
-     time_t started;
-     struct Peer* peer;
-     struct Piece* piece;
 };
 
 typedef enum BType {
@@ -156,68 +148,78 @@ struct BEncode {
 };
 
 /* from announce.c */
-void announce(struct Torrent*, int8_t, CURL*, struct event_base*);
+void             announce                  (struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* bitfield.c */
-uint8_t* init_bitfield(uint64_t, uint8_t*);
-uint64_t* init_global_bitfield(uint64_t);
-char* init_have_bitfield(uint64_t);
-void update_bitfield(uint8_t*, uint64_t*, uint8_t*);
-void update_global_bitfield(uint64_t, char*, uint64_t*);
+uint8_t*         init_bitfield             (uint64_t, uint8_t*);
+uint64_t*        init_global_bitfield      (uint64_t);
+char*            init_have_bitfield        (uint64_t);
+void             update_bitfield           (uint8_t*, uint64_t*, uint8_t*);
+void             update_global_bitfield    (uint64_t, char*, uint64_t*);
 
 /* heap.c */
-void heap_initialize(struct MinBinaryHeap*, uint64_t);
-int8_t heap_insert(struct MinBinaryHeap*, struct Piece);
-struct Piece* find_by_index(struct MinBinaryHeap*, uint64_t);
+int8_t           compare_priority          (struct Piece, struct Piece);
+int8_t           compare_age               (struct Piece, struct Piece);
+void             heap_initialize           (struct MinBinaryHeap*, uint64_t);
+int8_t           heap_insert               (struct MinBinaryHeap*, struct Piece, int8_t (*)(struct Piece, struct Piece));
+struct Piece*    find_by_index             (struct MinBinaryHeap*, uint64_t);
+struct Piece*    heap_min                  (struct MinBinaryHeap*);
+struct Piece*    heap_extract_min          (struct MinBinaryHeap*, int8_t (*)(struct Piece, struct Piece));
+struct Piece*    extract_by_index          (struct MinBinaryHeap*, uint64_t, int8_t (*)(struct Piece, struct Piece));
+
+/* list.c */
+struct Peer*     extract_element           (struct PeerNode**, struct Peer*);
+void             insert_head               (struct PeerNode**, struct Peer*);
+void             insert_tail               (struct PeerNode*, struct Peer*);
 
 /* metadata.c */
-struct Torrent* init_torrent(FILE*, double, double);
+struct Torrent*  init_torrent              (FILE*, double, double);
 
 /* network.c */
-void init_connections(struct PeerNode*, uint8_t*, struct event_base*);
+void             init_connections          (struct PeerNode*, uint8_t*, struct event_base*);
 
 /* parser.c */
-struct BEncode* parseBEncode(char*, int64_t*);
+struct BEncode*  parseBEncode              (char*, int64_t*);
 
 /* peer.c */
-struct Peer* init_peer(char*, char*, struct Torrent*);
-struct PeerNode* init_peer_node(struct Peer*, struct PeerNode*);
-void add_peers (struct Torrent*, struct PeerNode*);
-struct PeerNode* find_unchoked(struct PeerNode*, uint64_t);
-uint8_t all_choked(struct PeerNode*, uint64_t);
-void unchoke(struct Peer*);
-void interested(struct Peer*);
-void not_interested(struct Peer*);
-void request(struct Peer*, struct Piece*, off_t);
-void have(struct Piece*, struct PeerNode*, char*);
-int8_t has_needed_piece(uint8_t*, char*, uint64_t);
+struct Peer*     init_peer                 (char*, char*, struct Torrent*);
+struct PeerNode* init_peer_node            (struct Peer*, struct PeerNode*);
+void             add_peers                 (struct Torrent*, struct PeerNode*);
+struct PeerNode* find_unchoked             (struct PeerNode*, uint64_t);
+uint8_t          all_choked                (struct PeerNode*, uint64_t);
+void             unchoke                   (struct Peer*);
+void             interested                (struct Peer*);
+void             not_interested            (struct Peer*);
+void             request                   (struct Peer*, struct Piece*, off_t);
+void             have                      (struct Piece*, struct Torrent*);
+int8_t           has_needed_piece          (uint8_t*, char*, uint64_t);
+uint64_t         num_peers                 (struct PeerNode*);
 
 /* piece.c */
-void init_piece(struct Piece*, uint64_t);
-void free_pieces(struct Piece*, uint64_t);
-void download_piece(struct Piece*, struct Peer*);
-uint8_t verify_piece(void*, uint64_t, uint8_t*);
-uint8_t has_piece(struct Piece*, struct Peer*);
+void             init_piece                (struct Piece*, uint64_t);
+void             free_pieces               (struct Piece*, uint64_t);
+void             download_piece            (struct Piece*, struct Peer*);
+uint8_t          verify_piece              (void*, uint64_t, uint8_t*);
+uint8_t          has_piece                 (struct Piece*, struct Peer*);
+uint64_t         pieces_remaining          (char*, uint64_t);
+void             print_pieces_remaining    (char*, uint64_t);
 
 /* scheduler.c */
-void calculate_speed(struct Torrent*, struct event_base*);
-void update_interest (struct Torrent*, struct event_base*);
-void schedule(struct Torrent*, struct event_base*);
-void unqueue(struct Piece*, struct QueueObject**);
+void             queue_pieces              (struct Torrent*, struct Peer*);
+void             update_interest           (struct Torrent*, struct event_base*);
+void             schedule                  (struct Torrent*, struct event_base*);
+void             timeout                   (struct Torrent*, struct event_base*);
 
 /* torrent.c */
-void start_torrent(char*, double, double);
-void update_interest(struct Torrent*, struct event_base*);
+void             start_torrent             (char*, double, double);
+void             complete                  (struct Torrent*);
 
 /* url.c */
-char* construct_url(struct Torrent*, int8_t);
+char*            construct_url             (struct Torrent*, int8_t);
 
 /* util.c */
-void error(char*);
-struct BEncode* find_value(char*, struct BDictNode*);
-void freeBEncode(struct BEncode*);
-void print_sha1(uint8_t*);
-#ifdef DEBUG
-void write_incorrect_piece(void*, uint32_t, uint32_t);
-#endif
+void             error                     (char*);
+struct BEncode*  find_value                (char*, struct BDictNode*);
+void             freeBEncode               (struct BEncode*);
+void             print_sha1                (uint8_t*);
 #endif
