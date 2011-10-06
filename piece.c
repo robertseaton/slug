@@ -2,14 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include "includes.h"
-
-void 
-free_pieces (struct Piece* pieces, uint64_t num_pieces)
-{
-     free(pieces);
-}
 
 void 
 init_piece (struct Piece* p, uint64_t index)
@@ -20,10 +13,6 @@ init_piece (struct Piece* p, uint64_t index)
      p->priority = 0;
      p->state = Need;
      p->priority = 0;
-
-     int i;
-     for (i = 0; i < 32; i++)
-          p->subpiece_bitfield[i] = 0;
 }
 
 void 
@@ -32,7 +21,12 @@ download_piece (struct Piece* piece, struct Peer* peer)
      uint64_t offset = 0;
      piece->amount_requested = 0;
      piece->state = Downloading;
-     // request(peer, piece, offset);
+     piece->started = time(NULL);
+     piece->downloading_from = peer;
+     if (peer->pieces_requested == 0)
+          insert_head(&peer->torrent->active_peers, peer);
+     peer->pieces_requested++;
+     heap_insert(&peer->torrent->downloading, *piece, &compare_age);
 
      while (peer->torrent->piece_length - piece->amount_requested > 0) {
           request(peer, piece, offset);
@@ -68,4 +62,29 @@ has_piece (struct Piece* piece, struct Peer* peer)
           return 0;
      
      return peer->bitfield[piece->index];
+}
+
+uint64_t 
+pieces_remaining (char* have_bitfield, uint64_t num_pieces)
+{
+     uint64_t num_remain = 0;
+
+     uint64_t i;
+     for (i = 0; i < num_pieces; i++)
+          if (have_bitfield[i] == 0)
+               num_remain++;
+
+     return num_remain;
+}
+
+void
+print_pieces_remaining (char* have_bitfield, uint64_t num_pieces)
+{
+     printf("Pieces remaining: ");
+     
+     uint64_t i;
+     for (i = 0; i < num_pieces; i++)
+          if (have_bitfield[i] == 0)
+               printf("%lu, ", i);
+     printf("\n");
 }
