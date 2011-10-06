@@ -23,7 +23,7 @@ main (int argc, char* argv[])
      curl_global_init(CURL_GLOBAL_ALL);
      double peer_id = rand() % RANDOM_MAX + pow(10, 13);
      mkdir("/tmp/slug", S_IRWXU);
-     signal(SIGPIPE, SIG_IGN); /* FIXME */
+     signal(SIGPIPE, SIG_IGN);
 
      start_torrent(argv[1], peer_id, PORT);
      return 0;
