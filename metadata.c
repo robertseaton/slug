@@ -79,7 +79,7 @@ get_pieces (struct MinBinaryHeap* pieces, uint64_t* num_pieces, char* data)
                j++;
           }
           init_piece(piece, i);
-          heap_insert(pieces, *piece);
+          heap_insert(pieces, *piece, &compare_priority);
      }
 }
 
@@ -247,6 +247,7 @@ init_torrent (FILE* stream, double peer_id, double port)
           t.length = get_length(output_value->cargo.bDict);
           t.piece_length = get_piece_length(output_value->cargo.bDict);
           get_pieces(&t.pieces, &t.num_pieces, data);
+          heap_initialize(&t.downloading, t.num_pieces);
           t.url = get_url(bEncodedDict->cargo.bDict);
           t.info_hash = (uint8_t *)get_info_hash(data);
           t.peer_id = set_peer_id(peer_id);
@@ -271,9 +272,6 @@ init_torrent (FILE* stream, double peer_id, double port)
                         fileno(t.file), 
                         0);
 
-          int i;
-          for (i = 0; i < QUEUE_SIZE; i++)
-               t.download_queue[i] = NULL;
      } else
           error("Failed to parse metadata.");
      
