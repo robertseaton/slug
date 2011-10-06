@@ -1,10 +1,10 @@
+#include <arpa/inet.h>
 #include <assert.h>
 #include <event2/bufferevent.h>
 #include <event2/event.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 
 #include "includes.h"
 
@@ -50,7 +50,12 @@ handle_piece (struct Peer* p)
 #endif
      
      memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
-     struct Piece* piece = find_by_index(&p->torrent->pieces, index);
+     struct Piece* piece = extract_by_index(&p->torrent->downloading, index, &compare_age);
+
+     /* sometimes a peer will send us a piece that we don't need */
+     if (piece == NULL)
+          return ;
+
      piece->amount_downloaded += REQUEST_LENGTH;
 
      if (piece->amount_downloaded >= p->torrent->piece_length) {
@@ -59,16 +64,21 @@ handle_piece (struct Peer* p)
 
           if (verify_piece(addr, p->torrent->piece_length, sha1)) {
                printf("Successfully downloaded piece: #%d of %lu\n", index, p->torrent->num_pieces);
-               piece->state = Have;
-               have(piece, p->torrent->peer_list, p->torrent->have_bitfield);
+               have(piece, p->torrent);
+               p->pieces_requested--;
+               if (!p->tstate.peer_choking) {
+                    if (p->pieces_requested <= 1)
+                         insert_head(&p->torrent->unchoked_peers, p);
+               } else
+                    insert_head(&p->torrent->peer_list, p);
           } else {
                printf("Failed to verify piece: #%d\n", index);
-#ifdef DEBUG
-               write_incorrect_piece(addr, p->torrent->piece_length, index);
-#endif
-               unqueue(piece, p->torrent->download_queue);
+               piece->state = Need;
+               heap_insert(&p->torrent->pieces, *piece, &compare_priority);
           }
-     }
+     } else
+          /* put piece back in heap */
+          heap_insert(&p->torrent->downloading, *piece, &compare_age);
 }
 
 void 
@@ -84,7 +94,7 @@ get_msg (struct bufferevent* bufev, struct Peer* p)
           memcpy(&off, &p->message[5], sizeof(off));
           index = ntohl(index);
           off = ntohl(off);
-          piece = find_by_index(&p->torrent->pieces, index);
+          piece = find_by_index(&p->torrent->downloading, index);
 
           message_length = bufferevent_read(bufev, 
                                             &p->message[amount_read],
@@ -101,11 +111,9 @@ get_msg (struct bufferevent* bufev, struct Peer* p)
      p->amount_pending = p->amount_pending - message_length;
      p->amount_downloaded += message_length;
 
-     if (p->amount_pending == 0) {
+     if (p->amount_pending == 0)
           p->state = HaveMessage;
-          if (p->message_length == 16393)
-               piece->subpiece_bitfield[off / REQUEST_LENGTH] = 1;
-     } else if (p->amount_pending > 0)
+     else 
           p->state = HavePartialMessage;
 
 }
@@ -130,6 +138,7 @@ read_prefix (struct bufferevent* bufev, struct Peer* p)
 
      p->amount_pending = p->amount_pending - message_length;
 
+     /* FIXME: handle this edge case */
      if (p->amount_pending > 0)
           error("ERROR: Read partial prefix!\n");
 }
@@ -158,7 +167,7 @@ parse_msg (struct Peer* p)
           return ;
      case 1:
           /* choke, unchoke, interested, and not interested messages all have a fixed length of 1 */
-          switch ((int)*p->message) {
+          switch ((int)*(p->message)) {
           case 0: /* choke */
 #ifdef DEBUG
                printf("CHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
@@ -170,6 +179,7 @@ parse_msg (struct Peer* p)
                printf("UNCHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
 #endif
                p->tstate.peer_choking = 0;
+               insert_head(&p->torrent->unchoked_peers, p);
                return ;
           case 2: /* interested */
                p->tstate.peer_interested = 1;
