@@ -43,13 +43,6 @@ construct_handshake (struct Torrent* t)
 }
 
 void 
-free_torrent (struct Torrent* t)
-{
-     /* FIXME */
-     free_pieces(t->pieces, t->num_pieces);
-}
-
-void 
 start_torrent (char* file, double peer_id, double port)
 {
      FILE* stream = fopen(file, "r");
@@ -57,12 +50,28 @@ start_torrent (char* file, double peer_id, double port)
      struct event_base* base = event_base_new();
      uint8_t* handshake = construct_handshake(t);
      CURL* connection = curl_easy_init();
+
+     t->started = time(NULL);
      
      announce(t, STARTED, connection, base);
      init_connections(t->peer_list, handshake, base);
      update_interest(t, base);
-     calculate_speed(t, base);
      schedule(t, base);
+     timeout(t, base);
      event_base_dispatch(base);
-     free_torrent(t);
+}
+
+void
+complete (struct Torrent* t)
+{
+     time_t seconds_elapsed = time(NULL) - t->started;
+     uint64_t kb_downloaded = t->length / 1024;
+
+     printf("Torrent %s complete, took %ld minutes, %ld seconds (avg speed: %ld kbps)\n", 
+            t->name, 
+            seconds_elapsed / 60, 
+            seconds_elapsed % 60,
+            kb_downloaded / seconds_elapsed);
+
+     exit(0);
 }

@@ -19,6 +19,7 @@ init_peer (char* addr, char* port, struct Torrent* t)
      p->addr.sin_family = AF_INET;
      p->amount_downloaded = 0;
      p->torrent = t;
+     p->pieces_requested = 0;
      time(&p->started);
 
      return p;
@@ -160,12 +161,12 @@ request (struct Peer* peer, struct Piece* piece, off_t off)
 }
 
 void 
-have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
+have (struct Piece* piece, struct Torrent* t)
 {
      uint32_t have_prefix = htonl(5);
      uint8_t have_id = 4;
      uint32_t index = htonl(piece->index);
-     struct PeerNode* head = peer_list;
+     struct PeerNode* head = t->peer_list;
 
      while (head != NULL) {
           bufferevent_write(head->cargo->bufev, (const void *) &have_prefix, sizeof(have_prefix));
@@ -174,7 +175,20 @@ have (struct Piece* piece, struct PeerNode* peer_list, char* have_bitfield)
           head = head->next;
      }
 
-     have_bitfield[piece->index] = 1;
+     t->have_bitfield[piece->index] = 1;
+
+     uint64_t i = pieces_remaining(t->have_bitfield, t->num_pieces);
+
+     /* if 0 pieces remain, the torrent is complete */
+     if (i == 0) {
+          complete(t);
+     }
+
+#ifdef DEBUG
+     if (i < 5) {
+          print_pieces_remaining(t->have_bitfield, t->num_pieces);
+     }
+#endif
 }
 
 int8_t 
@@ -190,4 +204,20 @@ has_needed_piece (uint8_t* peer_bitfield, char* host_bitfield, uint64_t num_piec
                return 1;
 
      return 0;
+}
+
+uint64_t
+num_peers (struct PeerNode* list)
+{
+     struct PeerNode* head = list;
+     
+     uint64_t i = 0;
+     while (list != NULL) {
+          i++;
+          list = list->next;
+     }
+
+     list = head;
+
+     return i;
 }
