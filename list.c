@@ -3,17 +3,20 @@
 #include "includes.h"
 
 struct Peer* 
-extract_element (struct PeerNode** head, struct Peer* peer)
+extract_element (struct PeerNode* head, struct Peer* peer)
 {
+     if (peer == NULL)
+          return NULL;
+
      /* check if peer is the head */
-     if ((*head)->cargo == peer) {
-          *head = (*head)->next;
+     if (head->cargo == peer) {
+          head = head->next;
           
           return peer;
      }
 
-     struct PeerNode* prev = *head;
-     struct PeerNode* current = (*head)->next;
+     struct PeerNode* prev = head;
+     struct PeerNode* current = head->next;
 
      while (current != NULL) {
           if (current->cargo == peer) {

@@ -13,6 +13,8 @@
 #define SCHEDULE_INTERVAL   1
 #define INTEREST_INTERVAL   10
 #define TIMEOUT_INTERVAL    10
+#define OP_UNCHOKE_INTERVAL 30
+#define CALC_SPEED_INTERVAL 5
 #define TIMEOUT             35
 #define REQUEST_LENGTH      16384
 #define PEER_PIPELINE_LEN   4
@@ -58,11 +60,11 @@ struct Torrent {
      void* mmap;
      FILE* file;
      time_t started;
+     struct Peer* optimistic_unchoke;
+     struct Peer* active_peers[MAX_ACTIVE_PEERS];
      struct MinBinaryHeap pieces;
      struct MinBinaryHeap downloading;
      struct PeerNode* peer_list;
-     struct PeerNode* unchoked_peers;
-     struct PeerNode* active_peers;
 };
 
 struct Piece {
@@ -95,7 +97,7 @@ struct Peer {
      uint64_t message_length;
      uint64_t amount_pending;
      uint64_t amount_downloaded;
-     uint64_t speed;
+     int64_t speed;
      time_t started;
      uint8_t pieces_requested;
      uint8_t* message;
@@ -168,7 +170,7 @@ struct Piece*    heap_extract_min          (struct MinBinaryHeap*, int8_t (*)(st
 struct Piece*    extract_by_index          (struct MinBinaryHeap*, uint64_t, int8_t (*)(struct Piece, struct Piece));
 
 /* list.c */
-struct Peer*     extract_element           (struct PeerNode**, struct Peer*);
+struct Peer*     extract_element           (struct PeerNode*, struct Peer*);
 void             insert_head               (struct PeerNode**, struct Peer*);
 void             insert_tail               (struct PeerNode*, struct Peer*);
 
@@ -185,8 +187,7 @@ struct BEncode*  parseBEncode              (char*, int64_t*);
 struct Peer*     init_peer                 (char*, char*, struct Torrent*);
 struct PeerNode* init_peer_node            (struct Peer*, struct PeerNode*);
 void             add_peers                 (struct Torrent*, struct PeerNode*);
-struct PeerNode* find_unchoked             (struct PeerNode*, uint64_t);
-uint8_t          all_choked                (struct PeerNode*, uint64_t);
+struct Peer*     find_unchoked             (struct PeerNode*);
 void             unchoke                   (struct Peer*);
 void             interested                (struct Peer*);
 void             not_interested            (struct Peer*);

@@ -20,6 +20,7 @@ init_peer (char* addr, char* port, struct Torrent* t)
      p->amount_downloaded = 0;
      p->torrent = t;
      p->pieces_requested = 0;
+     p->speed = -1;
      time(&p->started);
 
      return p;
@@ -59,51 +60,31 @@ add_peers (struct Torrent* t, struct PeerNode* peer_list)
           t->peer_list = init_peer_node(peer_list->cargo, NULL);
           peer_list = peer_list->next;
      }
-     struct PeerNode* first = peer_list;
+     struct PeerNode* head = peer_list;
      /* iterate over all the peers */
      while (peer_list != NULL) {
           add_peer(t->peer_list, peer_list->cargo);
           peer_list = peer_list->next;
      }
 
-     t->peer_list = first;
+     t->peer_list = head;
 }
 
-struct PeerNode* 
-find_unchoked (struct PeerNode* head, uint64_t index)
+struct Peer*
+find_unchoked (struct PeerNode* list)
 {
-     struct PeerNode* unchoked_peers = NULL;
-     struct PeerNode* unchoked_head = unchoked_peers;
+     struct PeerNode* head = list;
+     struct Peer* out = NULL;
 
-     while (head != NULL) {
-          if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 0 && unchoked_peers == NULL) {
-               unchoked_peers = malloc(sizeof(struct PeerNode));
-               unchoked_head = unchoked_peers;
-               unchoked_peers->cargo = head->cargo;
-               unchoked_peers->next = NULL;
-          } else if (head->cargo->bitfield[index] && head->cargo->tstate.peer_choking == 0) {
-               unchoked_peers->next = malloc(sizeof(struct PeerNode));
-               unchoked_peers = unchoked_peers->next;
-               unchoked_peers->next = NULL;
-               unchoked_peers->cargo = head->cargo; 
-          }
-          head = head->next;
+     while (list != NULL) {
+          if (!list->cargo->tstate.peer_choking)
+               out = list->cargo;
+          list = list->next;
      }
 
-     return unchoked_head;
-               
-}
+     list = head;
 
-/* check if all the peers with a piece are choking us */
-uint8_t 
-all_choked (struct PeerNode* head, uint64_t index)
-{
-     struct PeerNode* unchoked_peers = find_unchoked(head, index);
-
-     if (unchoked_peers != NULL)
-          return 0;
-     else
-          return 1;
+     return out;
 }
 
 void 

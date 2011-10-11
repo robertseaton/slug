@@ -66,11 +66,14 @@ handle_piece (struct Peer* p)
                printf("Successfully downloaded piece: #%d of %lu\n", index, p->torrent->num_pieces);
                have(piece, p->torrent);
                p->pieces_requested--;
-               if (!p->tstate.peer_choking) {
-                    if (p->pieces_requested <= 1)
-                         insert_head(&p->torrent->unchoked_peers, p);
-               } else
-                    insert_head(&p->torrent->peer_list, p);
+               if (p->tstate.peer_choking) {
+                    uint64_t i;
+                    for (i = 0; i < MAX_ACTIVE_PEERS; i++)
+                         if (p->torrent->active_peers[i] == p) {
+                              p->torrent->active_peers[i] = NULL;
+                              insert_head(&p->torrent->peer_list, p);
+                         }
+               }
           } else {
                printf("Failed to verify piece: #%d\n", index);
                piece->state = Need;
@@ -179,7 +182,6 @@ parse_msg (struct Peer* p)
                printf("UNCHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
 #endif
                p->tstate.peer_choking = 0;
-               insert_head(&p->torrent->unchoked_peers, p);
                return ;
           case 2: /* interested */
                p->tstate.peer_interested = 1;

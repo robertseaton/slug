@@ -23,8 +23,6 @@ download_piece (struct Piece* piece, struct Peer* peer)
      piece->state = Downloading;
      piece->started = time(NULL);
      piece->downloading_from = peer;
-     if (peer->pieces_requested == 0)
-          insert_head(&peer->torrent->active_peers, peer);
      peer->pieces_requested++;
      heap_insert(&peer->torrent->downloading, *piece, &compare_age);
 
