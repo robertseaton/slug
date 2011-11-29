@@ -58,7 +58,7 @@ PeerNode* get_peers (struct Torrent* t, char* data)
           return NULL;
 
 #ifdef DEBUG
-     printf("ANNOUNCE: %lu peers.\n", num_peers);
+     printf("ANNOUNCE: %"PRIu64" peers.\n", num_peers);
 #endif
 
      struct PeerNode* current;

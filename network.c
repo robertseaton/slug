@@ -3,6 +3,7 @@
 #include <event2/bufferevent.h>
 #include <event2/event.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -63,7 +64,7 @@ handle_piece (struct Peer* p)
           uint8_t* sha1 = piece->sha1;
 
           if (verify_piece(addr, p->torrent->piece_length, sha1)) {
-               printf("Successfully downloaded piece: #%d of %lu\n", index, p->torrent->num_pieces);
+               printf("Successfully downloaded piece: #%d of %"PRIu64"\n", index, p->torrent->num_pieces);
                have(piece, p->torrent);
                p->pieces_requested--;
                if (p->tstate.peer_choking) {

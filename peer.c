@@ -1,5 +1,6 @@
 #include <event2/bufferevent.h>
 #include <arpa/inet.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -137,7 +138,7 @@ request (struct Peer* peer, struct Piece* piece, off_t off)
 
 #ifdef DEBUG
      if (off == 0)
-     printf("Requested piece %lu from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
+     printf("Requested piece %"PRIu64" from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
 #endif
 }
 

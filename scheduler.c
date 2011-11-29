@@ -201,7 +201,7 @@ __timeout (evutil_socket_t fd, short what, void* arg)
      while (p != NULL && time(NULL) - p->started > TIMEOUT) {
           p = heap_extract_min(&t->downloading, &compare_age);
 #ifdef DEBUG
-          printf("TIMEOUT: Piece #%lu from %s.\n", 
+          printf("TIMEOUT: Piece #%"PRIu64" from %s.\n", 
                  p->index, 
                  inet_ntoa(p->downloading_from->addr.sin_addr));
 #endif

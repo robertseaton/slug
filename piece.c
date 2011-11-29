@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +84,6 @@ print_pieces_remaining (char* have_bitfield, uint64_t num_pieces)
      uint64_t i;
      for (i = 0; i < num_pieces; i++)
           if (have_bitfield[i] == 0)
-               printf("%lu, ", i);
+               printf("%"PRIu64", ", i);
      printf("\n");
 }

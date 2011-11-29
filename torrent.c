@@ -67,11 +67,11 @@ complete (struct Torrent* t)
      time_t seconds_elapsed = time(NULL) - t->started;
      uint64_t kb_downloaded = t->length / 1024;
 
-     printf("Torrent %s complete, took %ld minutes, %ld seconds (avg speed: %ld kbps)\n", 
+     printf("Torrent %s complete, took %"PRId64" minutes, %"PRId64" seconds (avg speed: %"PRId64" kbps)\n", 
             t->name, 
-            seconds_elapsed / 60, 
-            seconds_elapsed % 60,
-            kb_downloaded / seconds_elapsed);
+            (uint64_t) seconds_elapsed / 60, 
+            (uint64_t) seconds_elapsed % 60,
+            (uint64_t) kb_downloaded / seconds_elapsed);
 
      exit(0);
 }
