@@ -1,21 +1,21 @@
 /*
  * scheduler.c 
  * handle scheduling of pieces of torrent to be downloaded 
- * * */
+ */
 #include <arpa/inet.h>
 #include <stdlib.h>
 
 #include "includes.h"
 
 void
-queue_pieces (struct Torrent* t, struct Peer* peer)
+queue_pieces(struct Torrent *t, struct Peer *peer)
 {
      /* don't request pieces from a choked peer */
      if (peer == NULL || peer->tstate.peer_choking)
           return ;
 
      struct MinBinaryHeap tmp;
-     struct Piece* piece;
+     struct Piece *piece;
 
      heap_initialize(&tmp, t->num_pieces);
 
@@ -37,7 +37,8 @@ queue_pieces (struct Torrent* t, struct Peer* peer)
      }
 }
 
-int in_queue (struct Peer** queue, struct Peer* cargo)
+int 
+in_queue(struct Peer **queue, struct Peer *cargo)
 {
      uint64_t i;
      for (i = 0; i < MAX_ACTIVE_PEERS; i++)
@@ -48,10 +49,10 @@ int in_queue (struct Peer** queue, struct Peer* cargo)
 }
 
 /* helper function for __optimistic_unchoke */
-void
-swap_peers (struct Peer* x, struct Peer* y)
+static void
+swap_peers(struct Peer *x, struct Peer *y)
 {
-     struct Peer* z;
+     struct Peer *z;
 
      z = x;
      x = y;
@@ -61,10 +62,10 @@ swap_peers (struct Peer* x, struct Peer* y)
 /* helper function for __optimistic_unchoke, finds the first peer that
  * has never been downloaded from */
 struct Peer*
-find_unused_peer (struct PeerNode* list)
+find_unused_peer(struct PeerNode *list)
 {
-     struct PeerNode* head = list;
-     struct Peer* out = NULL;
+     struct PeerNode *head = list;
+     struct Peer *out = NULL;
 
      while (list != NULL) {
           if (list->cargo->speed == -1) {
@@ -79,10 +80,10 @@ find_unused_peer (struct PeerNode* list)
 }
 
 int 
-compare_speed (const void* p, const void* q)
+compare_speed(const void *p, const void *q)
 {
-     struct Peer* x = p;
-     struct Peer* y = q;
+     struct Peer *x = p;
+     struct Peer *y = q;
 
      if (x == NULL)
           return -1;
@@ -98,10 +99,10 @@ compare_speed (const void* p, const void* q)
 
 /* every 30s, we unchoke a peer that we haven't tried yet */
 void
-__optimistic_unchoke (evutil_socket_t fd, short what, void* arg)
+__optimistic_unchoke(evutil_socket_t fd, short what, void *arg)
 {
-     struct Torrent* t = arg;
-     struct Peer* p;
+     struct Torrent *t = arg;
+     struct Peer *p;
 
      p = extract_element(t->peer_list, find_unused_peer(t->peer_list));
 
@@ -110,7 +111,7 @@ __optimistic_unchoke (evutil_socket_t fd, short what, void* arg)
       * choke the slower one
       * * */
      if (t->optimistic_unchoke != NULL && p != NULL) {
-          qsort(t->active_peers, MAX_ACTIVE_PEERS, sizeof(struct Peer*), &compare_speed);
+          qsort(t->active_peers, MAX_ACTIVE_PEERS, sizeof(struct Peer *), &compare_speed);
           if (t->optimistic_unchoke->speed > t->active_peers[0]->speed)
                swap_peers(t->optimistic_unchoke, t->active_peers[0]);
           // choke(t->optimistic_unchoke);
@@ -126,7 +127,7 @@ __optimistic_unchoke (evutil_socket_t fd, short what, void* arg)
 
 /* helper function for __calculate_speed() */
 void
-calculate_speed (struct Peer* p)
+calculate_speed(struct Peer *p)
 {
      if (p->amount_downloaded) {
           p->speed = p->amount_downloaded / CALC_SPEED_INTERVAL;
@@ -135,9 +136,9 @@ calculate_speed (struct Peer* p)
 }
 
 void 
-__calculate_speed (evutil_socket_t fd, short what, void* arg)
+__calculate_speed(evutil_socket_t fd, short what, void *arg)
 {
-     struct Torrent* t = arg;
+     struct Torrent *t = arg;
 
      uint64_t i;
      for (i = 0; i < MAX_ACTIVE_PEERS; i++) {
@@ -150,9 +151,9 @@ __calculate_speed (evutil_socket_t fd, short what, void* arg)
 }
 
 void 
-__schedule (evutil_socket_t fd, short what, void* arg)
+__schedule(evutil_socket_t fd, short what, void *arg)
 {
-     struct Torrent* t = arg;
+     struct Torrent *t = arg;
 
      /* FIXME: some kind of pipelining heuristic needs to be 
       * implemented in order to saturate high bandwidth 
@@ -173,9 +174,9 @@ __schedule (evutil_socket_t fd, short what, void* arg)
 }
 
 void 
-schedule (struct Torrent* t, struct event_base* base)
+schedule(struct Torrent *t, struct event_base *base)
 {
-     struct event* schedule_ev, * op_unchoke_ev, * calc_speed_ev;
+     struct event *schedule_ev, *op_unchoke_ev, *calc_speed_ev;
      struct timeval schedule_interval = {SCHEDULE_INTERVAL, 0};
      struct timeval op_unchoke_interval = {OP_UNCHOKE_INTERVAL, 0};
      struct timeval calc_speed_interval = {CALC_SPEED_INTERVAL, 0};
@@ -193,10 +194,10 @@ schedule (struct Torrent* t, struct event_base* base)
  * the priority queue.
  * * */
 void
-__timeout (evutil_socket_t fd, short what, void* arg)
+__timeout(evutil_socket_t fd, short what, void *arg)
 {
-     struct Torrent* t = arg;
-     struct Piece* p = heap_min(&t->downloading);
+     struct Torrent *t = arg;
+     struct Piece *p = heap_min(&t->downloading);
 
      while (p != NULL && time(NULL) - p->started > TIMEOUT) {
           p = heap_extract_min(&t->downloading, &compare_age);
@@ -219,9 +220,9 @@ __timeout (evutil_socket_t fd, short what, void* arg)
 }
 
 void
-timeout (struct Torrent* t, struct event_base* base)
+timeout(struct Torrent *t, struct event_base *base)
 {
-     struct event* timeout_ev;
+     struct event *timeout_ev;
      struct timeval timeout_interval = {TIMEOUT_INTERVAL, 0};
      
      timeout_ev = event_new(base, -1, EV_PERSIST, __timeout, t);
@@ -229,11 +230,11 @@ timeout (struct Torrent* t, struct event_base* base)
 }
 
 void 
-__interest (evutil_socket_t fd, short what, void* arg)
+__interest(evutil_socket_t fd, short what, void *arg)
 {
-     struct Torrent* t = arg;
+     struct Torrent *t = arg;
 
-     struct PeerNode* peer_list = t->peer_list;
+     struct PeerNode *peer_list = t->peer_list;
 
      while (peer_list != NULL) {
           if (has_needed_piece(peer_list->cargo->bitfield, 
@@ -252,9 +253,9 @@ __interest (evutil_socket_t fd, short what, void* arg)
 }
 
 void 
-update_interest (struct Torrent* t, struct event_base* base)
+update_interest(struct Torrent *t, struct event_base *base)
 {
-     struct event* interest_ev;
+     struct event *interest_ev;
      struct timeval interest_interval = {INTEREST_INTERVAL, 0};
 
      interest_ev = event_new(base, -1, EV_PERSIST, __interest, t);

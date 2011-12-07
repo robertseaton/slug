@@ -4,25 +4,25 @@
 
 #include "includes.h"
 
-char 
-from_hex (char c)
+static char 
+from_hex(char c)
 {
      return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
 }
 
-char 
-to_hex (char h)
+static char 
+to_hex(char h)
 {
      static char hex[] = "0123456789abcdef";
      return hex[h & 15];
 }
 
-char* 
-encode_url (char* s, char* end)
+char
+*encode_url(char *s, char *end)
 {
-     char* str_pt = s;
-     char* buffer = malloc(strlen(s) * 4 + 1);
-     char* buffer_pt = buffer;
+     char *str_pt = s;
+     char *buffer = malloc(strlen(s) * 4 + 1);
+     char *buffer_pt = buffer;
 
      while (str_pt <= end) {
           if (isalnum(*str_pt) || 
@@ -46,23 +46,16 @@ encode_url (char* s, char* end)
 }
 
 
-char* 
-construct_url (struct Torrent* t, int8_t event)
+char
+*construct_url(struct Torrent *t, int8_t event)
 {
-     char* peer_id = encode_url(t->peer_id, &t->peer_id[19]);
-     char* info_hash = encode_url((char *)t->info_hash, (char *)&t->info_hash[19]);
-     int32_t url_length = strlen(t->url) 
-          + strlen("?info_hash=") 
-          + strlen(info_hash) 
-          + strlen("&peer_id=") 
-          + strlen(peer_id) 
-          + strlen("&port=") 
-          + strlen("&uploaded=") 
-          + strlen("&downloaded=") 
-          + strlen("&left=") 
-          + strlen("&compact=") 
-          + strlen("&event=completed") + 100;
-     char* url = malloc(url_length);
+     char *peer_id = encode_url(t->peer_id, &t->peer_id[19]);
+     char *info_hash = encode_url((char *)t->info_hash, (char *)&t->info_hash[19]);
+     int32_t url_length = strlen(t->url) + strlen("?info_hash=") + 
+          strlen(info_hash) + strlen("&peer_id=") + strlen(peer_id) + 
+          strlen("&port=") + strlen("&uploaded=") + strlen("&downloaded=") + 
+          strlen("&left=") + strlen("&compact=") + strlen("&event=completed") + 100;
+     char *url = malloc(url_length);
 
 #define NUMWANT 10000   
      snprintf(url, url_length,

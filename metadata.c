@@ -9,10 +9,10 @@
 #include "includes.h"
 
 /* takes a metadata BEncoded dictionary and returns the url */ 
-char* 
-get_url (struct BDictNode* b)
+char
+*get_url(struct BDictNode *b)
 {
-     char* url;
+     char *url;
      char input_key[9] = "announce";
      struct BEncode* output_value = find_value(input_key, b);
      
@@ -28,23 +28,23 @@ get_url (struct BDictNode* b)
 
 /* takes a dictionary of BEncoded metadata and returns the piece length */
 uint64_t 
-get_piece_length (struct BDictNode* b)
+get_piece_length(struct BDictNode *b)
 {
      char input_key[13] = "piece length";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode *output_value = find_value(input_key, b);
 
      if (output_value == NULL || output_value->type != BInt)
           error("Failed to get piece length from metadata.");
  
-          return output_value->cargo.bInt;
+     return output_value->cargo.bInt;
           
 }
 
 /* takes the metadata as a string and returns the pieces */
 void 
-get_pieces (struct MinBinaryHeap* pieces, uint64_t* num_pieces, char* data)
+get_pieces(struct MinBinaryHeap *pieces, uint64_t *num_pieces, char *data)
 {
-     char* j;
+     char *j;
      *num_pieces = 0;
      
 #define PIECE_STR "6:pieces"
@@ -71,7 +71,7 @@ get_pieces (struct MinBinaryHeap* pieces, uint64_t* num_pieces, char* data)
      
      uint64_t i;
      for (i = 0; i < *num_pieces; ++i) {
-          struct Piece* piece = malloc(sizeof(struct Piece));
+          struct Piece *piece = malloc(sizeof(struct Piece));
 
           uint64_t k;
           for (k = 0; k < CHARS_IN_PIECE; ++k) {
@@ -83,12 +83,14 @@ get_pieces (struct MinBinaryHeap* pieces, uint64_t* num_pieces, char* data)
      }
 }
 
-/* takes a BEncoded metadata dictionary and returns 1 if private, 0 otherwise */
+/* Takes a BEncoded metadata dictionary and returns 1 if private, 0 otherwise. */
 uint8_t
-is_private (struct BDictNode* b)
+is_private(struct BDictNode *b)
 {
      char input_key[8] = "private";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode *output_value;
+
+     output_value = find_value(input_key, b);
      
      if (output_value != NULL && output_value->type == BInt && output_value->cargo.bInt == 1)
           return 1;
@@ -96,12 +98,14 @@ is_private (struct BDictNode* b)
           return 0;
 }
 
-char* 
-get_name (struct BDictNode* b)
+char 
+*get_name(struct BDictNode *b)
 {
-     char* name;
+     char *name;
      char input_key[5] = "name";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode *output_value;
+
+     output_value = find_value(input_key, b);
      
      if (output_value == NULL || output_value->type != BString)
           error("Failed to get torrent's name from metadata.");
@@ -114,10 +118,12 @@ get_name (struct BDictNode* b)
 }
 
 uint64_t 
-get_length (struct BDictNode* b)
+get_length(struct BDictNode *b)
 {
      char input_key[7] = "length";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode *output_value;
+
+     output_value = find_value(input_key, b);
 
      if (output_value == NULL || output_value->type != BInt)
           error("Failed to get torrent's length from metadata.");
@@ -125,10 +131,10 @@ get_length (struct BDictNode* b)
           return output_value->cargo.bInt;
 }
 
-char* 
-get_path (struct BDictNode* b)
+char 
+*get_path(struct BDictNode *b)
 {
-     char* path;
+     char *path;
      char input_key[5] = "path";
      struct BEncode* output_value = find_value(input_key, b);
 
@@ -164,12 +170,11 @@ get_path (struct BDictNode* b)
      return path;
 }
 
-/* checks if a torrent is a single file torrent from the metadata */
+/* Checks if a torrent is a single file torrent via the metadata. */
 uint8_t
-is_single_file_torrent (char* data)
+is_single_file_torrent(char *data)
 {
      /* only multi-file metadata dictions contain the files key */
-
      if (strstr(data, "5:files") != NULL)
           return 0;
      else
@@ -177,15 +182,15 @@ is_single_file_torrent (char* data)
 }
 
 /* returns the SHA1 hash of the info dictionary */
-uint8_t* 
-get_info_hash (char* data)
+uint8_t
+*get_info_hash(char *data)
 {
      SHA_CTX sha;
      int64_t i = 0;
-     char* j;
-     uint8_t* info_hash;
-     info_hash = malloc(sizeof(uint8_t) * 20);
+     char *j;
+     uint8_t *info_hash;
 
+     info_hash = malloc(sizeof(uint8_t) * 20);
 #define INFO_STR "4:info"
      j = strstr(data, INFO_STR);
      
@@ -193,7 +198,6 @@ get_info_hash (char* data)
           error("Failed to get info hash from torrent's metadata.");
 
      j += strlen(INFO_STR);
-
      freeBEncode(parseBEncode(j, &i));
      SHA1_Init(&sha);
      SHA1_Update(&sha, j, (int)i);
@@ -203,10 +207,11 @@ get_info_hash (char* data)
 }
 
 /* returns the randomly generated peerID for the torrent */
-char* 
-set_peer_id (double rand)
+char
+*set_peer_id(double rand)
 {
      static char peer_id[20];
+
      strcpy(peer_id, "SL");
      strcpy(&peer_id[2], "0000");
      gcvt(rand, 14, &peer_id[6]);
@@ -214,8 +219,8 @@ set_peer_id (double rand)
      return peer_id;
 }
 
-struct Torrent* 
-init_torrent (FILE* stream, double peer_id, double port)
+struct Torrent
+*init_torrent(FILE *stream, double peer_id, double port)
 {
      /* struct Torrent tmp; */
      static struct Torrent t;
@@ -225,7 +230,7 @@ init_torrent (FILE* stream, double peer_id, double port)
      long pos = ftell(stream);
      fseek(stream, 0, SEEK_SET);
 
-     char* data = malloc(pos);
+     char *data = malloc(pos);
      fread(data, pos, 1, stream);
 
      if (!is_single_file_torrent(data))

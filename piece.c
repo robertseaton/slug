@@ -6,7 +6,7 @@
 #include "includes.h"
 
 void 
-init_piece (struct Piece* p, uint64_t index)
+init_piece(struct Piece *p, uint64_t index)
 {
      p->index = index;
      p->amount_downloaded = 0;
@@ -17,7 +17,7 @@ init_piece (struct Piece* p, uint64_t index)
 }
 
 void 
-download_piece (struct Piece* piece, struct Peer* peer)
+download_piece(struct Piece *piece, struct Peer *peer)
 {
      uint64_t offset = 0;
      piece->amount_requested = 0;
@@ -35,7 +35,7 @@ download_piece (struct Piece* piece, struct Peer* peer)
 }
 
 uint8_t 
-verify_piece (void* addr, uint64_t piece_length, uint8_t* piece_sha)
+verify_piece(void *addr, uint64_t piece_length, uint8_t *piece_sha)
 {
      SHA_CTX sha;
      uint8_t sha1result[20];
@@ -55,7 +55,7 @@ verify_piece (void* addr, uint64_t piece_length, uint8_t* piece_sha)
 }
 
 uint8_t 
-has_piece (struct Piece* piece, struct Peer* peer)
+has_piece(struct Piece *piece, struct Peer *peer)
 {
      if (peer->bitfield == NULL)
           return 0;
@@ -64,7 +64,7 @@ has_piece (struct Piece* piece, struct Peer* peer)
 }
 
 uint64_t 
-pieces_remaining (char* have_bitfield, uint64_t num_pieces)
+pieces_remaining(char *have_bitfield, uint64_t num_pieces)
 {
      uint64_t num_remain = 0;
 
@@ -77,7 +77,7 @@ pieces_remaining (char* have_bitfield, uint64_t num_pieces)
 }
 
 void
-print_pieces_remaining (char* have_bitfield, uint64_t num_pieces)
+print_pieces_remaining(char *have_bitfield, uint64_t num_pieces)
 {
      printf("Pieces remaining: ");
      

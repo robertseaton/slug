@@ -11,10 +11,10 @@
 
 #include "includes.h"
 
-int8_t 
-failed (struct BDictNode* b)
+static int8_t 
+failed(struct BDictNode *b)
 {
-     struct BEncode* output_value = find_value("failure reason", b);
+     struct BEncode *output_value = find_value("failure reason", b);
      
      if (output_value != NULL)
           return 1;
@@ -22,18 +22,18 @@ failed (struct BDictNode* b)
      return 0;
 }
 
-void 
-pfailure_reason (struct BDictNode* b)
+static void 
+pfailure_reason(struct BDictNode *b)
 {
-     struct BEncode* output_value = find_value("failure reason", b);
+     struct BEncode *output_value = find_value("failure reason", b);
      fprintf(stderr, "Announce failed: %s\n", output_value->cargo.bStr);
 }
 
-struct 
-PeerNode* get_peers (struct Torrent* t, char* data)
+struct PeerNode 
+*get_peers(struct Torrent *t, char *data)
 {
      int64_t i = 0;
-     char* j;
+     char *j;
 
 #define PEERS_STR "5:peers"
      j = strstr(data, PEERS_STR);
@@ -51,9 +51,9 @@ PeerNode* get_peers (struct Torrent* t, char* data)
      /* skip the ':' */
      j++; i--;
 
-     /* possibility of 0 peers 
-      * not sure if this works, might need to check earlier 
-      * * */
+     /* There's a possibility we didn't find any peers.
+      * Not sure if this works, might need to check earlier.
+      */
      if (num_peers == 0)
           return NULL;
 
@@ -61,9 +61,9 @@ PeerNode* get_peers (struct Torrent* t, char* data)
      printf("ANNOUNCE: %"PRIu64" peers.\n", num_peers);
 #endif
 
-     struct PeerNode* current;
+     struct PeerNode *current;
      current = init_peer_node(init_peer(j, j + 4, t), NULL);
-     struct PeerNode* first = current;
+     struct PeerNode *first = current;
      j += 6;
 
      uint64_t k;
@@ -76,27 +76,27 @@ PeerNode* get_peers (struct Torrent* t, char* data)
      return first;
 }
 
-uint64_t 
-get_interval (struct BDictNode* b)
+static uint64_t 
+get_interval(struct BDictNode *b)
 {
-     struct BEncode* output_value = find_value("interval", b);
+     struct BEncode *output_value = find_value("interval", b);
      return output_value->cargo.bInt;
 }
 
-void 
-__announce (evutil_socket_t fd, short what, void* arg)
+static void 
+__announce(evutil_socket_t fd, short what, void *arg)
 {
      /* TODO */
 }
 
 void 
-announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* base)
+announce(struct Torrent *t, int8_t event, CURL *connection, struct event_base *base)
 {
      int32_t length = strlen(t->name) + strlen("/tmp/slug/-announce") + 1;
-     char* filepath = malloc(length);
-     char* url = construct_url(t, event);
+     char *filepath = malloc(length);
+     char *url = construct_url(t, event);
      snprintf(filepath, length, "/tmp/slug/%s-announce", t->name);
-     FILE* announce_data = fopen(filepath, "w");
+     FILE *announce_data = fopen(filepath, "w");
 
      curl_easy_setopt(connection, CURLOPT_URL, url);
      curl_easy_setopt(connection, CURLOPT_WRITEDATA, announce_data);
@@ -109,11 +109,11 @@ announce (struct Torrent* t, int8_t event, CURL* connection, struct event_base* 
      fseek(announce_data, 0, SEEK_END);
      int32_t pos = ftell(announce_data);
      fseek(announce_data, 0, SEEK_SET);
-     char* data = malloc(pos);
+     char *data = malloc(pos);
      fread(data, pos, 1, announce_data);
      
      int64_t x = 0;
-     struct BEncode* announceBEncode = parseBEncode(data, &x);
+     struct BEncode *announceBEncode = parseBEncode(data, &x);
 
      if (announceBEncode->type != BDict)
           error("Announce returned invalid BEncode.");

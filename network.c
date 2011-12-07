@@ -15,7 +15,7 @@ void read_prefix(struct bufferevent*, struct Peer*);
 void get_prefix(struct bufferevent*, struct Peer*);
 
 void 
-handle_cancel (struct Peer* p)
+handle_cancel(struct Peer *p)
 {
 #ifdef DEBUG
      printf("CANCEL: %s\n", inet_ntoa(p->addr.sin_addr));
@@ -24,7 +24,7 @@ handle_cancel (struct Peer* p)
 }
 
 void 
-handle_request (struct Peer* p)
+handle_request(struct Peer *p)
 {
 #ifdef DEBUG
      printf("REQUEST: %s\n", inet_ntoa(p->addr.sin_addr));
@@ -33,7 +33,7 @@ handle_request (struct Peer* p)
 }
 
 void 
-handle_piece (struct Peer* p)
+handle_piece(struct Peer *p)
 {
      uint32_t index, off;
      unsigned long long length;
@@ -86,7 +86,7 @@ handle_piece (struct Peer* p)
 }
 
 void 
-get_msg (struct bufferevent* bufev, struct Peer* p)
+get_msg(struct bufferevent *bufev, struct Peer *p)
 {
      uint64_t amount_read = p->message_length - p->amount_pending;
      int64_t message_length;
@@ -123,7 +123,7 @@ get_msg (struct bufferevent* bufev, struct Peer* p)
 }
 
 void 
-read_prefix (struct bufferevent* bufev, struct Peer* p)
+read_prefix(struct bufferevent *bufev, struct Peer *p)
 {
      if (p->message != NULL)
           free(p->message); /* free old message */
@@ -148,7 +148,7 @@ read_prefix (struct bufferevent* bufev, struct Peer* p)
 }
 
 void 
-get_prefix (struct bufferevent* bufev, struct Peer* p)
+get_prefix(struct bufferevent *bufev, struct Peer *p)
 {
      p->message_length = ntohl(p->message_length);
      p->amount_pending = p->message_length;
@@ -161,7 +161,7 @@ get_prefix (struct bufferevent* bufev, struct Peer* p)
 }
 
 void 
-parse_msg (struct Peer* p)
+parse_msg(struct Peer *p)
 {
      p->state = Connected;
 
@@ -241,9 +241,9 @@ parse_msg (struct Peer* p)
 }
 
 void 
-handle_peer_response (struct bufferevent* bufev, void* payload)
+handle_peer_response(struct bufferevent *bufev, void *payload)
 {
-     struct Peer* p = payload;
+     struct Peer *p = payload;
      
      if (p->state == Handshaking) {
           p->message = malloc(sizeof(uint8_t) * p->message_length);
@@ -261,7 +261,7 @@ handle_peer_response (struct bufferevent* bufev, void* payload)
 }
 
 void 
-init_connection (struct Peer* p, uint8_t* handshake, struct event_base* base)
+init_connection(struct Peer *p, uint8_t *handshake, struct event_base *base)
 {
      if (p->state != NotConnected)
           return ;
@@ -293,7 +293,7 @@ init_connection (struct Peer* p, uint8_t* handshake, struct event_base* base)
 }
 
 void 
-init_connections (struct PeerNode* head, uint8_t* handshake, struct event_base* base)
+init_connections(struct PeerNode *head, uint8_t *handshake, struct event_base *base)
 {
      while (head != NULL) {
           init_connection(head->cargo, handshake, base);

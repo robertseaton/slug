@@ -36,16 +36,16 @@ struct MinBinaryHeap;
 struct MinBinaryHeap {
      uint64_t heap_size;
      uint64_t max_elements;
-     struct Piece* elements;
+     struct Piece *elements;
 };
 
 struct Torrent {
-     char* peer_id;
-     char* name;
-     char* tracker_id;
-     char* url;
-     char* have_bitfield;
-     uint8_t* info_hash;
+     char *peer_id;
+     char *name;
+     char *tracker_id;
+     char *url;
+     char *have_bitfield;
+     uint8_t *info_hash;
      uint64_t length;
      uint64_t piece_length;
      uint64_t num_pieces;
@@ -54,17 +54,17 @@ struct Torrent {
      uint64_t downloaded;
      uint64_t left;
      uint64_t announce_interval;
-     uint64_t* global_bitfield;
+     uint64_t *global_bitfield;
      int8_t private;
      int8_t compact;
-     void* mmap;
-     FILE* file;
+     void *mmap;
+     FILE *file;
      time_t started;
-     struct Peer* optimistic_unchoke;
-     struct Peer* active_peers[MAX_ACTIVE_PEERS];
+     struct Peer *optimistic_unchoke;
+     struct Peer *active_peers[MAX_ACTIVE_PEERS];
      struct MinBinaryHeap pieces;
      struct MinBinaryHeap downloading;
-     struct PeerNode* peer_list;
+     struct PeerNode *peer_list;
 };
 
 struct Piece {
@@ -74,7 +74,7 @@ struct Piece {
      uint64_t amount_requested;
      uint64_t priority;
      uint8_t sha1[20];
-     struct Peer* downloading_from;
+     struct Peer *downloading_from;
      enum {
           Need,
           Queued,
@@ -91,7 +91,7 @@ struct State {
 };
 
 struct Peer {
-     struct bufferevent* bufev;
+     struct bufferevent *bufev;
      struct sockaddr_in addr;
      int32_t connectionfd;
      uint64_t message_length;
@@ -100,10 +100,10 @@ struct Peer {
      int64_t speed;
      time_t started;
      uint8_t pieces_requested;
-     uint8_t* message;
-     uint8_t* bitfield;
+     uint8_t *message;
+     uint8_t *bitfield;
      struct State tstate;
-     struct Torrent* torrent;
+     struct Torrent *torrent;
      enum {
           NotConnected,
           Connected,
@@ -117,8 +117,8 @@ struct Peer {
 
 /* simple linked list */
 struct PeerNode {
-     struct Peer* cargo;
-     struct PeerNode* next;
+     struct Peer *cargo;
+     struct PeerNode *next;
 };
 
 typedef enum BType {
@@ -135,17 +135,17 @@ struct BListNode {
 
 struct BDictNode {
      char* key;
-     struct BEncode* value;
-     struct BDictNode* next;
+     struct BEncode *value;
+     struct BDictNode *next;
 };
 
 struct BEncode {
      BType type;
      union {
           int64_t bInt;
-          char* bStr;
-          struct BListNode* bList;
-          struct BDictNode* bDict;
+          char *bStr;
+          struct BListNode *bList;
+          struct BDictNode *bDict;
      } cargo;
 };
 
@@ -153,9 +153,9 @@ struct BEncode {
 void             announce                  (struct Torrent*, int8_t, CURL*, struct event_base*);
 
 /* bitfield.c */
-uint8_t*         init_bitfield             (uint64_t, uint8_t*);
-uint64_t*        init_global_bitfield      (uint64_t);
-char*            init_have_bitfield        (uint64_t);
+uint8_t         *init_bitfield             (uint64_t, uint8_t*);
+uint64_t        *init_global_bitfield      (uint64_t);
+char            *init_have_bitfield        (uint64_t);
 void             update_bitfield           (uint8_t*, uint64_t*, uint8_t*);
 void             update_global_bitfield    (uint64_t, char*, uint64_t*);
 
@@ -164,30 +164,30 @@ int8_t           compare_priority          (struct Piece, struct Piece);
 int8_t           compare_age               (struct Piece, struct Piece);
 void             heap_initialize           (struct MinBinaryHeap*, uint64_t);
 int8_t           heap_insert               (struct MinBinaryHeap*, struct Piece, int8_t (*)(struct Piece, struct Piece));
-struct Piece*    find_by_index             (struct MinBinaryHeap*, uint64_t);
-struct Piece*    heap_min                  (struct MinBinaryHeap*);
-struct Piece*    heap_extract_min          (struct MinBinaryHeap*, int8_t (*)(struct Piece, struct Piece));
-struct Piece*    extract_by_index          (struct MinBinaryHeap*, uint64_t, int8_t (*)(struct Piece, struct Piece));
+struct Piece    *find_by_index             (struct MinBinaryHeap*, uint64_t);
+struct Piece    *heap_min                  (struct MinBinaryHeap*);
+struct Piece    *heap_extract_min          (struct MinBinaryHeap*, int8_t (*)(struct Piece, struct Piece));
+struct Piece    *extract_by_index          (struct MinBinaryHeap*, uint64_t, int8_t (*)(struct Piece, struct Piece));
 
 /* list.c */
-struct Peer*     extract_element           (struct PeerNode*, struct Peer*);
+struct Peer     *extract_element           (struct PeerNode*, struct Peer*);
 void             insert_head               (struct PeerNode**, struct Peer*);
 void             insert_tail               (struct PeerNode*, struct Peer*);
 
 /* metadata.c */
-struct Torrent*  init_torrent              (FILE*, double, double);
+struct Torrent  *init_torrent              (FILE*, double, double);
 
 /* network.c */
 void             init_connections          (struct PeerNode*, uint8_t*, struct event_base*);
 
 /* parser.c */
-struct BEncode*  parseBEncode              (char*, int64_t*);
+struct BEncode  *parseBEncode              (char*, int64_t*);
 
 /* peer.c */
-struct Peer*     init_peer                 (char*, char*, struct Torrent*);
-struct PeerNode* init_peer_node            (struct Peer*, struct PeerNode*);
+struct Peer     *init_peer                 (char*, char*, struct Torrent*);
+struct PeerNode *init_peer_node            (struct Peer*, struct PeerNode*);
 void             add_peers                 (struct Torrent*, struct PeerNode*);
-struct Peer*     find_unchoked             (struct PeerNode*);
+struct Peer     *find_unchoked             (struct PeerNode*);
 void             unchoke                   (struct Peer*);
 void             interested                (struct Peer*);
 void             not_interested            (struct Peer*);
@@ -220,7 +220,7 @@ char*            construct_url             (struct Torrent*, int8_t);
 
 /* util.c */
 void             error                     (char*);
-struct BEncode*  find_value                (char*, struct BDictNode*);
+struct BEncode  *find_value                (char*, struct BDictNode*);
 void             freeBEncode               (struct BEncode*);
 void             print_sha1                (uint8_t*);
 #endif

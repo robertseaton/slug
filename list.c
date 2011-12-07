@@ -2,8 +2,8 @@
 
 #include "includes.h"
 
-struct Peer* 
-extract_element (struct PeerNode* head, struct Peer* peer)
+struct Peer
+*extract_element(struct PeerNode *head, struct Peer *peer)
 {
      if (peer == NULL)
           return NULL;
@@ -15,8 +15,8 @@ extract_element (struct PeerNode* head, struct Peer* peer)
           return peer;
      }
 
-     struct PeerNode* prev = head;
-     struct PeerNode* current = head->next;
+     struct PeerNode *prev = head;
+     struct PeerNode *current = head->next;
 
      while (current != NULL) {
           if (current->cargo == peer) {
@@ -34,9 +34,9 @@ extract_element (struct PeerNode* head, struct Peer* peer)
 }
 
 void
-insert_head (struct PeerNode** head, struct Peer* peer)
+insert_head(struct PeerNode **head, struct Peer *peer)
 {
-     struct PeerNode* new_head = malloc(sizeof(struct PeerNode));
+     struct PeerNode *new_head = malloc(sizeof(struct PeerNode));
 
      new_head->cargo = peer;
      new_head->next = *head;
@@ -44,10 +44,10 @@ insert_head (struct PeerNode** head, struct Peer* peer)
 }
 
 void
-insert_tail (struct PeerNode* list, struct Peer* peer)
+insert_tail(struct PeerNode *list, struct Peer *peer)
 {
-     struct PeerNode* head = list;
-     struct PeerNode* tail = malloc(sizeof(struct PeerNode));
+     struct PeerNode *head = list;
+     struct PeerNode *tail = malloc(sizeof(struct PeerNode));
      tail->cargo = peer;
      tail->next = NULL;
 

@@ -3,48 +3,48 @@
 
 #include "includes.h"
 
-struct BEncode* 
-initBInt (int64_t i)
+struct BEncode
+*initBInt(int64_t i)
 {
-     struct BEncode* b = malloc(sizeof(struct BEncode));
+     struct BEncode *b = malloc(sizeof(struct BEncode));
      b->type = BInt;
      b->cargo.bInt = i;
 
      return b;
 }
 
-struct BEncode* 
-initBList (struct BListNode* l)
+struct BEncode
+*initBList(struct BListNode *l)
 {
-     struct BEncode* b = malloc(sizeof(struct BEncode));
+     struct BEncode *b = malloc(sizeof(struct BEncode));
      b->type = BList;
      b->cargo.bList = l;
 
      return b;
 }
 
-struct BEncode* 
-initBString (char* s)
+struct BEncode
+*initBString(char *s)
 {
-     struct BEncode* b = malloc(sizeof(struct BEncode));
+     struct BEncode *b = malloc(sizeof(struct BEncode));
      b->type = BString;
      b->cargo.bStr = s;
 
      return b;
 }
 
-struct BEncode* 
-initBDict (struct BDictNode* d)
+struct BEncode 
+*initBDict(struct BDictNode *d)
 {
-     struct BEncode* b = malloc(sizeof(struct BEncode));
+     struct BEncode *b = malloc(sizeof(struct BEncode));
      b->type = BDict;
      b->cargo.bDict = d;
      
      return b;
 }
 
-struct BEncode* 
-parseBInt (char* data, int64_t* position)
+struct BEncode
+*parseBInt(char *data, int64_t *position)
 {
      int64_t i = 0;
 
@@ -60,11 +60,11 @@ parseBInt (char* data, int64_t* position)
      return initBInt(i);
 }
 
-struct BEncode* 
-parseBList (char* data, int64_t* position)
+struct BEncode 
+*parseBList(char *data, int64_t *position)
 {
     struct BListNode l;
-    struct BListNode* pt = &l;
+    struct BListNode *pt = &l;
     
     if (data[(*position)++] != 'l')
          error("Failed to parse a BEncoded list.");
@@ -82,8 +82,8 @@ parseBList (char* data, int64_t* position)
     return initBList(l.next);
 }
 
-struct BEncode* 
-parseBString (char* data, int64_t* position)
+struct BEncode
+*parseBString(char *data, int64_t *position)
 {
     int64_t l = 0;
     
@@ -93,7 +93,7 @@ parseBString (char* data, int64_t* position)
     if (data[(*position)++] != ':')
          error("Failed to parse a BEncoded string.");
 
-    char* s = malloc(l + 1);
+    char *s = malloc(l + 1);
 
     int i;
     for (i = 0; i < l; i++)
@@ -104,11 +104,11 @@ parseBString (char* data, int64_t* position)
     return initBString(s);
 }
 
-struct BEncode* 
-parseBDict (char* data, int64_t* position)
+struct BEncode
+*parseBDict(char *data, int64_t *position)
 {
      struct BDictNode d;
-     struct BDictNode* pt = &d;
+     struct BDictNode *pt = &d;
 
      if (data[(*position)++] != 'd')
           error("Failed to parse a BEncoded dictionary.");
@@ -130,8 +130,8 @@ parseBDict (char* data, int64_t* position)
      return initBDict(d.next);
 }
 
-struct BEncode* 
-parseBEncode (char* data, int64_t* position)
+struct BEncode 
+*parseBEncode(char *data, int64_t *position)
 {
      switch (data[*position]) {
      case 'd':

@@ -11,7 +11,7 @@
 #define RANDOM_MAX 9999999999999
 
 int 
-main (int argc, char* argv[]) 
+main(int argc, char* argv[]) 
 {
      if (argc != 2) {
           printf("usage: slug [file]\n");
