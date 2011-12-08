@@ -1,6 +1,7 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
+#include <sys/queue.h>
 #include <curl/curl.h>
 #include <event2/event.h>
 #include <netinet/in.h>
@@ -39,6 +40,15 @@ struct MinBinaryHeap {
      struct Piece *elements;
 };
 
+struct TorrentFile {
+     TAILQ_ENTRY(TorrentFile) files;
+     uint64_t length;
+     char *md5sum;
+     char *path;
+     void *mmap;
+     int fd;
+};
+
 struct Torrent {
      char *peer_id;
      char *name;
@@ -46,7 +56,6 @@ struct Torrent {
      char *url;
      char *have_bitfield;
      uint8_t *info_hash;
-     uint64_t length;
      uint64_t piece_length;
      uint64_t num_pieces;
      uint64_t port;
@@ -57,14 +66,22 @@ struct Torrent {
      uint64_t *global_bitfield;
      int8_t private;
      int8_t compact;
-     void *mmap;
-     FILE *file;
      time_t started;
      struct Peer *optimistic_unchoke;
      struct Peer *active_peers[MAX_ACTIVE_PEERS];
      struct MinBinaryHeap pieces;
      struct MinBinaryHeap downloading;
      struct PeerNode *peer_list;
+     union {
+          struct {
+               struct TorrentFile file;
+          } single;
+
+          struct {
+               TAILQ_HEAD(files, TorrentFile) files;
+               uint64_t length;
+          } multi;
+     } torrent_files;
 };
 
 struct Piece {
