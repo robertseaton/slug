@@ -3,7 +3,9 @@
  * handle scheduling of pieces of torrent to be downloaded 
  */
 #include <arpa/inet.h>
+
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "includes.h"
 

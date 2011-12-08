@@ -49,9 +49,13 @@ handle_piece(struct Peer *p)
      if (off == 0)
      printf("PIECE: #%d from %s\n", index, inet_ntoa(p->addr.sin_addr));
 #endif
+     if (p->torrent->is_single) 
+          memcpy(p->torrent->torrent_files.single.file.mmap + length, &p->message[9], REQUEST_LENGTH);
+     else 
+          ; /* TODO */
      
-     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
-     struct Piece* piece = extract_by_index(&p->torrent->downloading, index, &compare_age);
+
+     struct Piece *piece = extract_by_index(&p->torrent->downloading, index, &compare_age);
 
      /* sometimes a peer will send us a piece that we don't need */
      if (piece == NULL)
@@ -60,8 +64,12 @@ handle_piece(struct Peer *p)
      piece->amount_downloaded += REQUEST_LENGTH;
 
      if (piece->amount_downloaded >= p->torrent->piece_length) {
-          void* addr = p->torrent->mmap + index * p->torrent->piece_length;
+          void *addr;
           uint8_t* sha1 = piece->sha1;
+          if (p->torrent->is_single)
+               addr = p->torrent->torrent_files.single.file.mmap + index * p->torrent->piece_length;
+          else
+               ; /* TODO */
 
           if (verify_piece(addr, p->torrent->piece_length, sha1)) {
                printf("Successfully downloaded piece: #%d of %"PRIu64"\n", index, p->torrent->num_pieces);

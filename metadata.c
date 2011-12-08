@@ -233,15 +233,15 @@ struct Torrent
      char *data = malloc(pos);
      fread(data, pos, 1, stream);
 
-     if (!is_single_file_torrent(data))
+     if (!(t.is_single = is_single_file_torrent(data)))
           error("Sorry, slug only supports single file torrents for the time being!");
 
      int64_t x = 0;
-     struct BEncode* bEncodedDict = parseBEncode(data, &x);
+     struct BEncode *bEncodedDict = parseBEncode(data, &x);
 
      if (bEncodedDict->type == BDict) {
           char input_key[5] = "info";
-          struct BEncode* output_value;
+          struct BEncode *output_value;
           output_value = find_value(input_key, bEncodedDict->cargo.bDict);
 
           if (output_value == NULL || output_value->type != BDict)
@@ -264,18 +264,21 @@ struct Torrent
           t.global_bitfield = init_global_bitfield(t.num_pieces);
           t.have_bitfield = init_have_bitfield(t.num_pieces);
           t.peer_list = NULL; /* got to initialize this */
-          t.file = fopen(t.name, "w+");
+          
+          if (t.is_single) {
+               t.torrent_files.single.file.fd = fileno(fopen(t.name, "w+"));
+               t.torrent_files.single.file.length = t.length;
+               /* write a dummy byte for MMAPing */
+               fseek(fdopen(t.torrent_files.single.file.fd, "w+"), t.length - 1, SEEK_SET);
+               write(t.torrent_files.single.file.fd, "", 1);
 
-          /* write a dummy byte for MMAPing */
-          fseek(t.file, t.length - 1, SEEK_SET);
-          write(fileno(t.file), "", 1);
-
-          t.mmap = mmap(0, 
-                        t.length, 
-                        PROT_READ | PROT_WRITE, 
-                        MAP_SHARED, 
-                        fileno(t.file), 
-                        0);
+               t.torrent_files.single.file.mmap = mmap(0, 
+                                                       t.length, 
+                                                       PROT_READ | PROT_WRITE, 
+                                                       MAP_SHARED, 
+                                                       t.torrent_files.single.file.fd, 
+                                                       0);
+          }
 
      } else
           error("Failed to parse metadata.");

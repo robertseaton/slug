@@ -2,6 +2,7 @@
 #include <event2/event.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "includes.h"
 

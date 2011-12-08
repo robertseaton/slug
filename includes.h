@@ -56,12 +56,14 @@ struct Torrent {
      char *url;
      char *have_bitfield;
      uint8_t *info_hash;
+     uint8_t is_single;
      uint64_t piece_length;
      uint64_t num_pieces;
      uint64_t port;
      uint64_t uploaded;
      uint64_t downloaded;
      uint64_t left;
+     uint64_t length;
      uint64_t announce_interval;
      uint64_t *global_bitfield;
      int8_t private;
