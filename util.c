@@ -10,9 +10,9 @@
 
 /* prints a string to stderr then exits 
  * TODO: replace with logging lib
- * * */
+ */
 void 
-error (char* s)
+error(char *s)
 {
      fprintf(stderr, "%s\n", s);
      exit(1);
@@ -20,12 +20,12 @@ error (char* s)
 
 /* takes a key and a BEncoded dictionary node and searches for
  * the corresponding value
- * * */
-struct BEncode* 
-find_value (char* key, struct BDictNode* d)
+ */
+struct BEncode
+*find_value(char *key, struct BDictNode *d)
 {
-     struct BDictNode* pt = d;
-     struct BDictNode* next = d;
+     struct BDictNode *pt = d;
+     struct BDictNode *next = d;
      
      while (next) {
           next = pt->next;
@@ -37,10 +37,10 @@ find_value (char* key, struct BDictNode* d)
 }
 
 void 
-freeBList (struct BListNode* l)
+freeBList(struct BListNode *l)
 {
-     struct BListNode* pt = l;
-     struct BListNode* next = l;
+     struct BListNode *pt = l;
+     struct BListNode *next = l;
 
      while (next) {
           next = pt->next;
@@ -51,10 +51,10 @@ freeBList (struct BListNode* l)
 }
 
 void 
-freeBDict (struct BDictNode* d)
+freeBDict(struct BDictNode *d)
 {
-     struct BDictNode* pt = d;
-     struct BDictNode* next = d;
+     struct BDictNode *pt = d;
+     struct BDictNode *next = d;
 
      while (next) {
           next = pt->next;
@@ -66,7 +66,7 @@ freeBDict (struct BDictNode* d)
      return;
 }
 void 
-freeBEncode (struct BEncode* b)
+freeBEncode(struct BEncode *b)
 {
      if (b->type == BInt) {
           free(b);
@@ -97,7 +97,7 @@ freeBEncode (struct BEncode* b)
 }
 
 void 
-print_sha1 (uint8_t* sha1)
+print_sha1(uint8_t *sha1)
 {
      int i;
      for (i = 0; i < 20; i++)
@@ -109,7 +109,7 @@ print_sha1 (uint8_t* sha1)
 /* saves piece from known-good file to a file
  * for later comparison with the output of 
  * the file from write_incorrect_piece
- * * */
+ */
 void 
 write_correct_piece (uint32_t piece_length, uint32_t index)
 {
@@ -138,11 +138,11 @@ write_correct_piece (uint32_t piece_length, uint32_t index)
 /* saves piece that failed verification to a file
  * for later inspection with the likes of hexdump.
  * only available if built with -DDEBUG
- * * */
+ */
 void 
-write_incorrect_piece (void* piece, uint32_t piece_length, uint32_t index)
+write_incorrect_piece(void *piece, uint32_t piece_length, uint32_t index)
 {
-     FILE* failed_piece = fopen("failed_piece.out", "w+");
+     FILE *failed_piece = fopen("failed_piece.out", "w+");
      
      write(fileno(failed_piece), piece, piece_length);
      fclose(failed_piece);
