@@ -23,10 +23,10 @@ Contributing is easy. Just fork the project, make your changes, and then submit 
 
 Some stuff that needs done:
 
-* Clean-up the codebase to match [OpenBSD's style guidelines](http://www.openbsd.org/cgi-bin/man.cgi?query=style&apropos=0&sektion=0&manpath=OpenBSD+Current&arch=i386&format=html). All of the linked lists need be reimplemented to use the macros from <queue.h>.
+* Clean-up the codebase to match [OpenBSD's style guidelines](http://www.openbsd.org/cgi-bin/man.cgi?query=style&apropos=0&sektion=0&manpath=OpenBSD+Current&arch=i386&format=html). All of the linked lists need be reimplemented to use the macros from `<queue.h>`.
 * Lots of error checking has been ignored and needs added.
 * Read through the code and find areas that ought to be explained by a comment but aren't. Comment them or tell me to comment them.
 * Implement support for multi-file torrents. For more information, you can look at how [unworkable](http://code.google.com/p/unworkable/source/browse/#svn%2Ftrunk) does it.
-* Improve out queueing strategy. If you know C++, you could go dig through rtorrent's code, figure out their download strategy, and explain it to me so I can implement it.
+* Improve our queueing strategy. If you know C++, you could go dig through rtorrent's code, figure out their download strategy, and explain it to me so I can implement it.
 * Implement a variable length queue that's based on some network speed heuristic.
 * Flesh out announce support. 
