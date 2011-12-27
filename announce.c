@@ -10,6 +10,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <syslog.h>
+#include <assert.h>
 
 #include "includes.h"
 
@@ -115,8 +116,8 @@ announce(struct Torrent *t, int8_t event, CURL *connection, struct event_base *b
      int64_t x = 0;
      struct BEncode *announceBEncode = parseBEncode(data, &x);
 
-     assert(announceBEncode->type != BDict);
-     else if (failed(announceBEncode->cargo.bDict))
+     assert(announceBEncode->type == BDict);
+     if (failed(announceBEncode->cargo.bDict))
           pfailure_reason(announceBEncode->cargo.bDict);
      else {
           add_peers(t, get_peers(t, data));

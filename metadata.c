@@ -119,10 +119,10 @@ get_length(struct BDictNode *b)
           /* Debugging this is great because you get to inspect values like :
              output_value.cargo.bList.cargo.cargo.bDict.value.cargo.bInt 
              I HAVE MADE A POOR DECISION SOMEWHERE, COMPUTER   */
-           uint64_t length = (find_value(input_key, output_value->cargo.bList->cargo->cargo.bDict))->cargo.bInt;
+           uint64_t length = (find_value("length", output_value->cargo.bList->cargo->cargo.bDict))->cargo.bInt;
            struct BListNode *next = output_value->cargo.bList->next;
            while (next != NULL) {
-                length += (find_value(input_key, next->cargo->cargo.bDict))->cargo.bInt;
+                length += (find_value("length", next->cargo->cargo.bDict))->cargo.bInt;
                 next = next->next;
            }
            
