@@ -15,8 +15,7 @@ char
 *get_url(struct BDictNode *b)
 {
      char *url;
-     char input_key[9] = "announce";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode *output_value = find_value("announce", b);
      
      assert(output_value != NULL && output_value->type == BString);
      url = malloc(strlen(output_value->cargo.bStr) + 1); 
@@ -29,8 +28,7 @@ char
 uint64_t 
 get_piece_length(struct BDictNode *b)
 {
-     char input_key[13] = "piece length";
-     struct BEncode *output_value = find_value(input_key, b);
+     struct BEncode *output_value = find_value("piece length", b);
 
      assert(output_value != NULL && output_value->type == BInt);
  
@@ -83,10 +81,9 @@ get_pieces(struct MinBinaryHeap *pieces, uint64_t *num_pieces, char *data)
 uint8_t
 is_private(struct BDictNode *b)
 {
-     char input_key[8] = "private";
      struct BEncode *output_value;
 
-     output_value = find_value(input_key, b);
+     output_value = find_value("private", b);
      
      if (output_value != NULL && output_value->type == BInt && output_value->cargo.bInt == 1)
           return 1;
@@ -98,10 +95,9 @@ char
 *get_name(struct BDictNode *b)
 {
      char *name;
-     char input_key[5] = "name";
      struct BEncode *output_value;
 
-     output_value = find_value(input_key, b);
+     output_value = find_value("name", b);
      assert(output_value != NULL || output_value->type == BString);
      name = malloc(strlen(output_value->cargo.bStr) + 1);
      strcpy(name, output_value->cargo.bStr);
@@ -112,15 +108,13 @@ char
 uint64_t 
 get_length(struct BDictNode *b)
 {
-     char input_key[7] = "length";
      struct BEncode *output_value;
 
-     output_value = find_value(input_key, b);
+     output_value = find_value("length", b);
 
       if (output_value == NULL) {
           /* multi-file torrent */
-           char key[6] = "files";
-           output_value = find_value(key, b);
+           output_value = find_value("files", b);
           
           /* Debugging this is great because you get to inspect values like :
              output_value.cargo.bList.cargo.cargo.bDict.value.cargo.bInt 
@@ -141,37 +135,34 @@ char
 *get_path(struct BDictNode *b)
 {
      char *path;
-     char input_key[5] = "path";
-     struct BEncode* output_value = find_value(input_key, b);
+     struct BEncode* output_value = find_value("path", b);
 
-     if (output_value == NULL || output_value->type != BList)
-          error("Failed to get torrent's path from metadata");
-     else {
-          struct BListNode* head = output_value->cargo.bList;
-          struct BListNode* next = output_value->cargo.bList;
-          size_t i = 0;
+     assert(output_value != NULL && output_value->type == BList);
+    
+     struct BListNode* head = output_value->cargo.bList;
+     struct BListNode* next = output_value->cargo.bList;
+     size_t i = 0;
 
-          while (next) {
-               if (next->cargo->type == BString)
-                    i += sizeof(char) * (strlen(next->cargo->cargo.bStr) + 1);
-               next = next->next;
-          }
-          
-          /* make sure we don't malloc 0 */
-          assert(i);
-
-          path = malloc(i);
-          next = head;
-
-          while (next) {
-               if (next->cargo->type == BString) {
-                    strcat(path, next->cargo->cargo.bStr);
-                    strcat(path, "/");
-               }
-               next = next->next;
-          }
+     while (next) {
+          if (next->cargo->type == BString)
+               i += sizeof(char) * (strlen(next->cargo->cargo.bStr) + 1);
+          next = next->next;
      }
+          
+     /* make sure we don't malloc 0 */
+     assert(i);
 
+     path = malloc(i);
+     next = head;
+
+     while (next) {
+          if (next->cargo->type == BString) {
+               strcat(path, next->cargo->cargo.bStr);
+               strcat(path, "/");
+          }
+          next = next->next;
+     }
+    
      return path;
 }
 
@@ -240,10 +231,9 @@ struct Torrent
      struct BEncode *bEncodedDict = parseBEncode(data, &x);
 
      if (bEncodedDict->type == BDict) {
-          char input_key[5] = "info";
           struct BEncode *output_value;
-          output_value = find_value(input_key, bEncodedDict->cargo.bDict);
-
+          
+          output_value = find_value("info", bEncodedDict->cargo.bDict);
           assert(output_value != NULL && output_value->type == BDict);
           
           t.is_single = is_single_file_torrent(data);
