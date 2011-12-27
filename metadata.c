@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -5,6 +6,7 @@
 #include <sys/mman.h>
 #include <openssl/sha.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "includes.h"
 
@@ -16,12 +18,9 @@ char
      char input_key[9] = "announce";
      struct BEncode* output_value = find_value(input_key, b);
      
-     if (output_value == NULL || output_value->type != BString)
-          error("Failed to get URL from metadata.");
-     else {
-          url = malloc(strlen(output_value->cargo.bStr) + 1); 
-          strcpy(url, output_value->cargo.bStr);
-     }
+     assert(output_value != NULL && output_value->type == BString);
+     url = malloc(strlen(output_value->cargo.bStr) + 1); 
+     strcpy(url, output_value->cargo.bStr);
 
      return url;          
 }
@@ -33,8 +32,7 @@ get_piece_length(struct BDictNode *b)
      char input_key[13] = "piece length";
      struct BEncode *output_value = find_value(input_key, b);
 
-     if (output_value == NULL || output_value->type != BInt)
-          error("Failed to get piece length from metadata.");
+     assert(output_value != NULL && output_value->type == BInt);
  
      return output_value->cargo.bInt;
           
@@ -49,8 +47,7 @@ get_pieces(struct MinBinaryHeap *pieces, uint64_t *num_pieces, char *data)
      
 #define PIECE_STR "6:pieces"
      j = strstr(data, PIECE_STR);
-     if (j == NULL)
-          error("Failed to get pieces from metadata");
+     assert(j != NULL);
 
      j += strlen(PIECE_STR);
      while (isdigit(*j))  {
@@ -64,8 +61,7 @@ get_pieces(struct MinBinaryHeap *pieces, uint64_t *num_pieces, char *data)
      *num_pieces = *num_pieces / CHARS_IN_PIECE;
 
      /* make sure we don't malloc 0 */
-     if (*num_pieces == 0)
-          error("Parsing metadata returned an invalid number of pieces.");
+     assert(*num_pieces);
 
      heap_initialize(pieces, *num_pieces);
      
@@ -106,13 +102,9 @@ char
      struct BEncode *output_value;
 
      output_value = find_value(input_key, b);
-     
-     if (output_value == NULL || output_value->type != BString)
-          error("Failed to get torrent's name from metadata.");
-     else {
-          name = malloc(strlen(output_value->cargo.bStr) + 1);
-          strcpy(name, output_value->cargo.bStr);
-     }
+     assert(output_value != NULL || output_value->type == BString);
+     name = malloc(strlen(output_value->cargo.bStr) + 1);
+     strcpy(name, output_value->cargo.bStr);
 
      return name;
 }
@@ -125,10 +117,24 @@ get_length(struct BDictNode *b)
 
      output_value = find_value(input_key, b);
 
-     if (output_value == NULL || output_value->type != BInt)
-          error("Failed to get torrent's length from metadata.");
-     
-          return output_value->cargo.bInt;
+      if (output_value == NULL) {
+          /* multi-file torrent */
+           char key[6] = "files";
+           output_value = find_value(key, b);
+          
+          /* Debugging this is great because you get to inspect values like :
+             output_value.cargo.bList.cargo.cargo.bDict.value.cargo.bInt 
+             I HAVE MADE A POOR DECISION SOMEWHERE, COMPUTER   */
+           uint64_t length = (find_value(input_key, output_value->cargo.bList->cargo->cargo.bDict))->cargo.bInt;
+           struct BListNode *next = output_value->cargo.bList->next;
+           while (next != NULL) {
+                length += (find_value(input_key, next->cargo->cargo.bDict))->cargo.bInt;
+                next = next->next;
+           }
+           
+           return length;
+      } else 
+           return output_value->cargo.bInt;
 }
 
 char 
@@ -152,8 +158,7 @@ char
           }
           
           /* make sure we don't malloc 0 */
-          if (i == 0)
-               error("Parsing metadata returned an invalid value for path length.");
+          assert(i);
 
           path = malloc(i);
           next = head;
@@ -170,11 +175,11 @@ char
      return path;
 }
 
-/* Checks if a torrent is a single file torrent via the metadata. */
+/* Checks if a torrent is a single file torrent. */
 uint8_t
 is_single_file_torrent(char *data)
 {
-     /* only multi-file metadata dictions contain the files key */
+     /* only multi-file metadata dictionaries contain the files key */
      if (strstr(data, "5:files") != NULL)
           return 0;
      else
@@ -194,8 +199,7 @@ uint8_t
 #define INFO_STR "4:info"
      j = strstr(data, INFO_STR);
      
-     if (j == NULL)
-          error("Failed to get info hash from torrent's metadata.");
+     assert(j != NULL);
 
      j += strlen(INFO_STR);
      freeBEncode(parseBEncode(j, &i));
@@ -222,19 +226,15 @@ char
 struct Torrent
 *init_torrent(FILE *stream, double peer_id, double port)
 {
-     /* struct Torrent tmp; */
      static struct Torrent t;
-     /* struct Torrent* t = malloc(sizeof(struct Torrent)); */
      
+     /* This reads a file into an array. If it looks retarded, that's because it
+        is. */
      fseek(stream, 0, SEEK_END);
      long pos = ftell(stream);
      fseek(stream, 0, SEEK_SET);
-
      char *data = malloc(pos);
      fread(data, pos, 1, stream);
-
-     if (!(t.is_single = is_single_file_torrent(data)))
-          error("Sorry, slug only supports single file torrents for the time being!");
 
      int64_t x = 0;
      struct BEncode *bEncodedDict = parseBEncode(data, &x);
@@ -244,9 +244,9 @@ struct Torrent
           struct BEncode *output_value;
           output_value = find_value(input_key, bEncodedDict->cargo.bDict);
 
-          if (output_value == NULL || output_value->type != BDict)
-               error("Failed to get torrent's metadata.");
+          assert(output_value != NULL && output_value->type == BDict);
           
+          t.is_single = is_single_file_torrent(data);
           t.announce_interval = DEFAULT_ANNOUNCE;
           t.name = get_name(output_value->cargo.bDict);
           t.length = get_length(output_value->cargo.bDict);
@@ -266,22 +266,22 @@ struct Torrent
           t.peer_list = NULL; /* got to initialize this */
           
           if (t.is_single) {
-               t.torrent_files.single.file.fd = fileno(fopen(t.name, "w+"));
-               t.torrent_files.single.file.length = t.length;
+               struct TorrentFile *f = &t.torrent_files.single.file;
+               f->fd = fileno(fopen(t.name, "w+"));
+               f->length = t.length;
                /* write a dummy byte for MMAPing */
-               fseek(fdopen(t.torrent_files.single.file.fd, "w+"), t.length - 1, SEEK_SET);
-               write(t.torrent_files.single.file.fd, "", 1);
+               fseek(fdopen(f->fd, "w+"), t.length - 1, SEEK_SET);
+               write(f->fd, "", 1);
 
-               t.torrent_files.single.file.mmap = mmap(0, 
-                                                       t.length, 
-                                                       PROT_READ | PROT_WRITE, 
-                                                       MAP_SHARED, 
-                                                       t.torrent_files.single.file.fd, 
-                                                       0);
+               f->mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, 
+                              f->fd, 0);
+          } else {
+               
           }
-
-     } else
-          error("Failed to parse metadata.");
+     } else {
+          syslog(LOG_ERR, "Failed to parse metadata.");
+          exit(1);
+     }
      
      free(data);
      freeBEncode(bEncodedDict);

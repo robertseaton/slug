@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <syslog.h>
 
 #include "includes.h"
 
@@ -49,8 +50,7 @@ add_peer(struct PeerNode *current, struct Peer *peer)
      } 
      
      /* If we made it this far, that means our peer isn't already contained
-      * in the linked list.
-      */
+        in the linked list. */
      current = init_peer_node(peer, NULL);
 }
 
@@ -137,10 +137,8 @@ request(struct Peer *peer, struct Piece *piece, off_t off)
      bufferevent_write(peer->bufev, (const void *)&offset, sizeof(offset));
      bufferevent_write(peer->bufev, (const void *)&request_length, sizeof(request_length));
 
-#ifdef DEBUG
      if (off == 0)
-     printf("Requested piece %"PRIu64" from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
-#endif
+          syslog(LOG_DEBUG, "Requested piece %"PRIu64" from peer %s.\n", piece->index, inet_ntoa(peer->addr.sin_addr));
 }
 
 void 

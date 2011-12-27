@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <syslog.h>
 
 #include "includes.h"
 
@@ -27,7 +28,7 @@ static void
 pfailure_reason(struct BDictNode *b)
 {
      struct BEncode *output_value = find_value("failure reason", b);
-     fprintf(stderr, "Announce failed: %s\n", output_value->cargo.bStr);
+     syslog(LOG_WARNING, "Announce failed: %s\n", output_value->cargo.bStr);
 }
 
 struct PeerNode 
@@ -58,9 +59,7 @@ struct PeerNode
      if (num_peers == 0)
           return NULL;
 
-#ifdef DEBUG
-     printf("ANNOUNCE: %"PRIu64" peers.\n", num_peers);
-#endif
+     syslog(LOG_DEBUG, "ANNOUNCE: %"PRIu64" peers.\n", num_peers);
 
      struct PeerNode *current;
      current = init_peer_node(init_peer(j, j + 4, t), NULL);
@@ -116,8 +115,7 @@ announce(struct Torrent *t, int8_t event, CURL *connection, struct event_base *b
      int64_t x = 0;
      struct BEncode *announceBEncode = parseBEncode(data, &x);
 
-     if (announceBEncode->type != BDict)
-          error("Announce returned invalid BEncode.");
+     assert(announceBEncode->type != BDict);
      else if (failed(announceBEncode->cargo.bDict))
           pfailure_reason(announceBEncode->cargo.bDict);
      else {

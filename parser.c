@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
 
@@ -48,14 +49,10 @@ struct BEncode
 {
      int64_t i = 0;
 
-     if (data[(*position)++] != 'i')
-          error("Failed to parse BInt.");
-
+     assert(data[(*position)++] == 'i');
      while (isdigit(data[*position]))
           i = i * 10 + (data[(*position)++] - '0');
-
-     if (data[(*position)++] != 'e')
-          error("Failed to parse BEncoded int.");
+     assert(data[(*position)++] == 'e');
 
      return initBInt(i);
 }
@@ -66,18 +63,14 @@ struct BEncode
     struct BListNode l;
     struct BListNode *pt = &l;
     
-    if (data[(*position)++] != 'l')
-         error("Failed to parse a BEncoded list.");
-        
+    assert(data[(*position)++] == 'l');
     while (data[*position] != 'e') {
          pt->next = malloc(sizeof(struct BListNode));
          pt = pt->next;
          pt->cargo = parseBEncode(data, position);
          pt->next = 0;
     }
-    
-    if (data[(*position)++] != 'e')
-         error("Failed to parse a BEncoded list.");
+    assert(data[(*position)++] == 'e');
         
     return initBList(l.next);
 }
@@ -90,8 +83,7 @@ struct BEncode
     while (isdigit(data[*position])) 
          l = l * 10 + (data[(*position)++] - '0');
 
-    if (data[(*position)++] != ':')
-         error("Failed to parse a BEncoded string.");
+    assert(data[(*position)++] == ':');
 
     char *s = malloc(l + 1);
 
@@ -110,9 +102,7 @@ struct BEncode
      struct BDictNode d;
      struct BDictNode *pt = &d;
 
-     if (data[(*position)++] != 'd')
-          error("Failed to parse a BEncoded dictionary.");
-
+     assert(data[(*position)++] == 'd');
      while (data[*position] != 'e') {
           pt->next = malloc(sizeof(struct BDictNode));
           pt = pt->next;
@@ -123,9 +113,7 @@ struct BEncode
 
           free(s);
      }
-
-     if (data[(*position)++] != 'e')
-          error("Failed to parse a BEncoded dictionary.");
+     assert(data[(*position)++] == 'e');
 
      return initBDict(d.next);
 }

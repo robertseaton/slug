@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <syslog.h>
 #include <time.h>
 
 #include "includes.h"
@@ -24,6 +25,7 @@ main(int argc, char* argv[])
      double peer_id = rand() % RANDOM_MAX + pow(10, 13);
      mkdir("/tmp/slug", S_IRWXU);
      signal(SIGPIPE, SIG_IGN);
+     openlog("slug", LOG_PERROR, 0);
 
      start_torrent(argv[1], peer_id, PORT);
      return 0;

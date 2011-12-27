@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 
 #include <stdlib.h>
+#include <syslog.h>
 #include <inttypes.h>
 
 #include "includes.h"
@@ -119,10 +120,8 @@ __optimistic_unchoke(evutil_socket_t fd, short what, void *arg)
           // choke(t->optimistic_unchoke);
           insert_head(&t->peer_list, t->optimistic_unchoke);
      }
-#ifdef DEBUG
-     printf("OPTIMISTIC UNCHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
-#endif
 
+     syslog(LOG_DEBUG, "OPTIMISTIC UNCHOKE: %s\n", inet_ntoa(p->addr.sin_addr));
      t->optimistic_unchoke = p;
      unchoke(p);
 }
@@ -203,11 +202,9 @@ __timeout(evutil_socket_t fd, short what, void *arg)
 
      while (p != NULL && time(NULL) - p->started > TIMEOUT) {
           p = heap_extract_min(&t->downloading, &compare_age);
-#ifdef DEBUG
-          printf("TIMEOUT: Piece #%"PRIu64" from %s.\n", 
+          syslog(LOG_DEBUG, "TIMEOUT: Piece #%"PRIu64" from %s.\n", 
                  p->index, 
                  inet_ntoa(p->downloading_from->addr.sin_addr));
-#endif
           p->downloading_from->state = Dead;
           p->amount_downloaded = 0;
           
