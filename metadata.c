@@ -98,7 +98,7 @@ char
      struct BEncode *output_value;
 
      output_value = find_value("name", b);
-     assert(output_value != NULL || output_value->type == BString);
+     assert(output_value != NULL && output_value->type == BString);
      name = malloc(strlen(output_value->cargo.bStr) + 1);
      strcpy(name, output_value->cargo.bStr);
 
