@@ -9,12 +9,12 @@
 #include "includes.h"
 
 struct Peer
-*init_peer(char *addr, char *port, struct Torrent *t)
+*init_peer(uint32_t addr, uint16_t port, struct Torrent *t)
 {
      struct Peer *p = malloc(sizeof(struct Peer));
 
-     memcpy((void *)&p->addr.sin_addr.s_addr, addr, sizeof(p->addr.sin_addr.s_addr));
-     memcpy((void *)&p->addr.sin_port, port, sizeof(p->addr.sin_port));
+     memcpy((void *)&p->addr.sin_addr.s_addr, &addr, sizeof(p->addr.sin_addr.s_addr));
+     memcpy((void *)&p->addr.sin_port, &port, sizeof(p->addr.sin_port));
      p->state = NotConnected;
      p->tstate.peer_choking = 1;
      p->tstate.interested = 0;
@@ -41,17 +41,18 @@ struct PeerNode
 }
 
 void 
-add_peer(struct PeerNode *current, struct Peer *peer)
+add_peer(struct PeerNode **head, struct Peer *peer)
 {
-     while (current != NULL) {
+     struct PeerNode *current;
+     
+     for (current = *head; current->next != NULL; current = current->next) {
           if (current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr)
                return ;
-          current = current->next;
      } 
      
      /* If we made it this far, that means our peer isn't already contained
         in the linked list. */
-     current = init_peer_node(peer, NULL);
+     current->next = init_peer_node(peer, NULL);
 }
 
 void 
@@ -65,7 +66,7 @@ add_peers(struct Torrent *t, struct PeerNode *peer_list)
      struct PeerNode *head = peer_list;
      /* iterate over all the peers */
      while (peer_list != NULL) {
-          add_peer(t->peer_list, peer_list->cargo);
+          add_peer(&t->peer_list, peer_list->cargo);
           peer_list = peer_list->next;
      }
 

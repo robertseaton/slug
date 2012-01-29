@@ -115,7 +115,7 @@ __optimistic_unchoke(evutil_socket_t fd, short what, void *arg)
       * * */
      if (t->optimistic_unchoke != NULL && p != NULL) {
           qsort(t->active_peers, MAX_ACTIVE_PEERS, sizeof(struct Peer *), &compare_speed);
-          if (t->optimistic_unchoke->speed > t->active_peers[0]->speed)
+          if (t->active_peers[0] != NULL && t->optimistic_unchoke->speed > t->active_peers[0]->speed)
                swap_peers(t->optimistic_unchoke, t->active_peers[0]);
           // choke(t->optimistic_unchoke);
           insert_head(&t->peer_list, t->optimistic_unchoke);

@@ -26,6 +26,16 @@
 #define COMPLETED           2
 #define VOID                8
 
+#define SUCCESS             1
+#define ANNOUNCE_FAILURE    0
+#define ANNOUNCE_SUCCESS    1
+#define UDP_SEND_FAILURE    0
+#define UDP_RECEIVE_FAILURE 2
+#define DEFAULT_PEERS_WANTED 50
+#define MAX_RETRIES          8
+
+#define ANNOUNCE 1
+
 /* start forward declarations */
 struct Piece;
 struct BEncode;
@@ -59,7 +69,7 @@ struct Torrent {
      uint8_t is_single;
      uint64_t piece_length;
      uint64_t num_pieces;
-     uint64_t port;
+     uint16_t port;
      uint64_t uploaded;
      uint64_t downloaded;
      uint64_t left;
@@ -74,6 +84,7 @@ struct Torrent {
      struct MinBinaryHeap pieces;
      struct MinBinaryHeap downloading;
      struct PeerNode *peer_list;
+     struct Tracker *tracker;
      union {
           struct {
                struct TorrentFile file;
@@ -203,8 +214,9 @@ void             init_connections          (struct PeerNode*, uint8_t*, struct e
 struct BEncode  *parseBEncode              (char*, int64_t*);
 
 /* peer.c */
-struct Peer     *init_peer                 (char*, char*, struct Torrent*);
+struct Peer     *init_peer                 (uint32_t, uint16_t, struct Torrent*);
 struct PeerNode *init_peer_node            (struct Peer*, struct PeerNode*);
+void             add_peer                  (struct PeerNode**, struct Peer*);
 void             add_peers                 (struct Torrent*, struct PeerNode*);
 struct Peer     *find_unchoked             (struct PeerNode*);
 void             unchoke                   (struct Peer*);

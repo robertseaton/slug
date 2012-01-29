@@ -49,9 +49,13 @@ struct BEncode
 {
      int64_t i = 0;
 
+     /* I have wisely embedded side-effects in assert(), the mark of a master
+        programmer. Now if some poor soul disables asserts, they will completely
+        break the parser. This is the only place that this behavior is 
+        documented. */
      assert(data[(*position)++] == 'i');
      while (isdigit(data[*position]))
-          i = i * 10 + (data[(*position)++] - '0');
+          i = i * 10 + (data[(*position)++] - '0'); /* disgusting */
      assert(data[(*position)++] == 'e');
 
      return initBInt(i);
