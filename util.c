@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <libgen.h>
 #ifdef DEBUG
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -103,6 +105,41 @@ print_sha1(uint8_t *sha1)
      for (i = 0; i < 20; i++)
                printf("%d ", sha1[i]);
      printf("\n");
+}
+
+int
+mkpath(char *s, mode_t mode)
+{
+        char *r = NULL, *path = NULL, *up = NULL;
+        int rv;
+
+        rv = -1;
+        if (strcmp(s, ".") == 0 || strcmp(s, "/") == 0)
+                return 0;
+
+        if ((path = strdup(s)) == NULL)
+                exit(EXIT_FAILURE);
+
+        if ((r = dirname(s)) == NULL)
+                goto out;
+        
+        if ((up = strdup(r)) == NULL)
+                exit(EXIT_FAILURE);
+
+        if ((mkpath(up, mode) == -1) && (errno != EEXIST))
+                goto out;
+
+        if ((mkdir(path, mode) == -1) && (errno != EEXIST))
+                rv = -1;
+        else
+                rv = 0;
+
+out:
+        if (up != NULL)
+                free(up);
+        free(path);
+
+        return rv;
 }
 
 #ifdef DEBUG

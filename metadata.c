@@ -7,6 +7,7 @@
 #include <openssl/sha.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <sys/stat.h>
 
 #include "includes.h"
 
@@ -132,20 +133,25 @@ get_length(struct BDictNode *b)
 }
 
 char 
-*get_path(struct BDictNode *b)
+*get_path(struct BDictNode *b, char* folder)
 {
      char *path;
-     struct BEncode* output_value = find_value("path", b);
+     struct BEncode *output_value = find_value("path", b);
 
      assert(output_value != NULL && output_value->type == BList);
     
-     struct BListNode* head = output_value->cargo.bList;
-     struct BListNode* next = output_value->cargo.bList;
-     size_t i = 0;
+     struct BListNode *head = output_value->cargo.bList;
+     struct BListNode *next = output_value->cargo.bList;
+     size_t i;
+
+     if (folder != NULL)
+          i = strlen(folder) + 1;
+     else
+          i = 0;
 
      while (next) {
           if (next->cargo->type == BString)
-               i += sizeof(char) * (strlen(next->cargo->cargo.bStr) + 1);
+               i += sizeof(char) * (strlen(next->cargo->cargo.bStr) + 2);
           next = next->next;
      }
           
@@ -153,8 +159,14 @@ char
      assert(i);
 
      path = malloc(i);
+     *path = '\0'; /* for strcat */
      next = head;
 
+     if (folder != NULL) {
+          strcat(path, folder);
+          strcat(path, "/");
+     }
+ 
      while (next) {
           if (next->cargo->type == BString) {
                strcat(path, next->cargo->cargo.bStr);
@@ -162,7 +174,9 @@ char
           }
           next = next->next;
      }
-    
+
+     /* remove the final trailing / */
+     path[strlen(path) - 1] = '\0';
      return path;
 }
 
@@ -212,6 +226,45 @@ char
      gcvt(rand, 14, &peer_id[6]);
 
      return peer_id;
+}
+
+struct TorrentFile
+*init_files(struct BDictNode *b, char* folder)
+{
+     struct BEncode *value = find_value("files", b);
+     struct BListNode *next;
+     struct TorrentFile *files;
+
+     int num_files;
+     for (num_files = 0, next = value->cargo.bList; next != NULL; next = next->next)
+          num_files++;
+
+     files = malloc(sizeof(struct TorrentFile) * num_files);
+
+     int i;
+     void *addr = NULL;
+     FILE *f;
+     char *p;
+     for (i = 0, next = value->cargo.bList; next != NULL; next = next->next, i++) {
+          files[i].path = get_path(next->cargo->cargo.bDict, folder);
+          p = strrchr(files[i].path, '/');
+          *p = '\0';
+          mkpath(files[i].path, S_IRWXU);
+          *p = '/';
+          files[i].length = get_length(next->cargo->cargo.bDict);
+          if ((f = fopen(files[i].path, "w+")) == NULL)
+               perror('\0');
+          files[i].fd = fileno(fopen(files[i].path, "w+"));
+          fseek(fdopen(files[i].fd, "w+"), files[i].length - 1, SEEK_SET);
+          write(files[i].fd, "", 1);
+          files[i].mmap = mmap(0, files[i].length, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, 
+                               files[i].fd, 0);
+          if (addr == NULL)
+               addr = files[i].mmap;
+          addr += files[i].length;
+     }
+
+     return files;
 }
 
 struct Torrent
@@ -266,7 +319,7 @@ struct Torrent
                f->mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, 
                               f->fd, 0);
           } else {
-               
+               t.torrent_files.multi.files = init_files(output_value->cargo.bDict, t.name);
           }
      } else {
           syslog(LOG_ERR, "Failed to parse metadata.");

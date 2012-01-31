@@ -51,9 +51,7 @@ struct MinBinaryHeap {
 };
 
 struct TorrentFile {
-     TAILQ_ENTRY(TorrentFile) files;
      uint64_t length;
-     char *md5sum;
      char *path;
      void *mmap;
      int fd;
@@ -91,7 +89,7 @@ struct Torrent {
           } single;
 
           struct {
-               TAILQ_HEAD(files, TorrentFile) files;
+               struct TorrentFile *files;
                uint64_t length;
           } multi;
      } torrent_files;
@@ -247,11 +245,12 @@ void             start_torrent             (char*, double, double);
 void             complete                  (struct Torrent*);
 
 /* url.c */
-char*            construct_url             (struct Torrent*, int8_t);
+char            *construct_url             (struct Torrent*, int8_t);
 
 /* util.c */
 void             error                     (char*);
 struct BEncode  *find_value                (char*, struct BDictNode*);
 void             freeBEncode               (struct BEncode*);
 void             print_sha1                (uint8_t*);
+int              mkpath                    (char*, mode_t);
 #endif
