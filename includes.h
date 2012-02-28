@@ -77,10 +77,11 @@ struct Torrent {
      int8_t private;
      int8_t compact;
      time_t started;
+     void *mmap;
      struct Peer *optimistic_unchoke;
      struct Peer *active_peers[MAX_ACTIVE_PEERS];
-     struct MinBinaryHeap pieces;
-     struct MinBinaryHeap downloading;
+     struct MinBinaryHeap *pieces;
+     struct MinBinaryHeap *downloading;
      struct PeerNode *peer_list;
      struct Tracker *tracker;
      union {
@@ -217,6 +218,7 @@ struct PeerNode *init_peer_node            (struct Peer*, struct PeerNode*);
 void             add_peer                  (struct PeerNode**, struct Peer*);
 void             add_peers                 (struct Torrent*, struct PeerNode*);
 struct Peer     *find_unchoked             (struct PeerNode*);
+struct Peer     *find_seed                 (struct PeerNode*, uint64_t);
 void             unchoke                   (struct Peer*);
 void             interested                (struct Peer*);
 void             not_interested            (struct Peer*);

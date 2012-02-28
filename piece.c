@@ -25,7 +25,7 @@ download_piece(struct Piece *piece, struct Peer *peer)
      piece->started = time(NULL);
      piece->downloading_from = peer;
      peer->pieces_requested++;
-     heap_insert(&peer->torrent->downloading, *piece, &compare_age);
+     heap_insert(peer->torrent->downloading, *piece, &compare_age);
 
      while (peer->torrent->piece_length - piece->amount_requested > 0) {
           request(peer, piece, offset);

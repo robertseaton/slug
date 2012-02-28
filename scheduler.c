@@ -17,26 +17,26 @@ queue_pieces(struct Torrent *t, struct Peer *peer)
      if (peer == NULL || peer->tstate.peer_choking)
           return ;
 
-     struct MinBinaryHeap tmp;
+     struct MinBinaryHeap *tmp = malloc(sizeof(struct MinBinaryHeap));
      struct Piece *piece;
 
-     heap_initialize(&tmp, t->num_pieces);
+     heap_initialize(tmp, t->num_pieces);
 
      while (peer->pieces_requested <= PEER_PIPELINE_LEN) {
-               piece = heap_extract_min(&t->pieces, &compare_priority);
+               piece = heap_extract_min(t->pieces, compare_priority);
                if (piece != NULL && peer->bitfield[piece->index])
                     download_piece(piece, peer);
                else if (piece != NULL) {
-                    heap_insert(&tmp, *piece, &compare_priority);
+                    heap_insert(tmp, *piece, &compare_priority);
                } else
                     break;
      }
      
      /* move pieces from tmp heap back into t->pieces */
-     piece = heap_extract_min(&tmp, &compare_priority);
+     piece = heap_extract_min(tmp, compare_priority);
      while (piece != NULL) {
-          heap_insert(&t->pieces, *piece, &compare_priority);
-          piece = heap_extract_min(&tmp, &compare_priority);
+          heap_insert(t->pieces, *piece, &compare_priority);
+          piece = heap_extract_min(tmp, &compare_priority);
      }
 }
 
@@ -166,6 +166,9 @@ __schedule(evutil_socket_t fd, short what, void *arg)
           if (t->active_peers[i] == NULL)
                t->active_peers[i] = extract_element(t->peer_list, find_unchoked(t->peer_list));
 
+          if (t->active_peers[i] == NULL)
+               t->active_peers[i] = extract_element(t->peer_list, find_seed(t->peer_list, t->num_pieces));
+
           /* still possible it's null */
           if (t->active_peers[i] != NULL)
                queue_pieces(t, t->active_peers[i]);
@@ -198,10 +201,10 @@ void
 __timeout(evutil_socket_t fd, short what, void *arg)
 {
      struct Torrent *t = arg;
-     struct Piece *p = heap_min(&t->downloading);
+     struct Piece *p = heap_min(t->downloading);
 
      while (p != NULL && time(NULL) - p->started > TIMEOUT) {
-          p = heap_extract_min(&t->downloading, &compare_age);
+          p = heap_extract_min(t->downloading, &compare_age);
           syslog(LOG_DEBUG, "TIMEOUT: Piece #%"PRIu64" from %s.\n", 
                  p->index, 
                  inet_ntoa(p->downloading_from->addr.sin_addr));
@@ -213,8 +216,8 @@ __timeout(evutil_socket_t fd, short what, void *arg)
                if (t->active_peers[i] == p->downloading_from)
                     t->active_peers[i] = NULL;
 
-          heap_insert(&t->pieces, *p, &compare_priority);
-          p = heap_min(&t->downloading);
+          heap_insert(t->pieces, *p, &compare_priority);
+          p = heap_min(t->downloading);
      }
 }
 

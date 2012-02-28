@@ -289,13 +289,15 @@ struct Torrent
           output_value = find_value("info", bEncodedDict->cargo.bDict);
           assert(output_value != NULL && output_value->type == BDict);
           
+          t.pieces = malloc(sizeof(struct MinBinaryHeap));
+          t.downloading = malloc(sizeof(struct MinBinaryHeap));
           t.is_single = is_single_file_torrent(data);
           t.announce_interval = DEFAULT_ANNOUNCE;
           t.name = get_name(output_value->cargo.bDict);
           t.length = get_length(output_value->cargo.bDict);
           t.piece_length = get_piece_length(output_value->cargo.bDict);
-          get_pieces(&t.pieces, &t.num_pieces, data);
-          heap_initialize(&t.downloading, t.num_pieces);
+          get_pieces(t.pieces, &t.num_pieces, data);
+          heap_initialize(t.downloading, t.num_pieces);
           t.url = get_url(bEncodedDict->cargo.bDict);
           t.info_hash = (uint8_t *)get_info_hash(data);
           t.peer_id = set_peer_id(peer_id);
@@ -318,8 +320,10 @@ struct Torrent
 
                f->mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, 
                               f->fd, 0);
+               t.mmap = f->mmap;
           } else {
                t.torrent_files.multi.files = init_files(output_value->cargo.bDict, t.name);
+               t.mmap = t.torrent_files.multi.files[0].mmap;
           }
      } else {
           syslog(LOG_ERR, "Failed to parse metadata.");

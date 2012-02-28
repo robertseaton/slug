@@ -22,7 +22,7 @@ char
 *encode_url(char *s, char *end)
 {
      char *str_pt = s;
-     char *buffer = malloc(strlen(s) * 4 + 1);
+     char *buffer = malloc((end - s) * 4 + 1);
      char *buffer_pt = buffer;
 
      while (str_pt <= end) {
@@ -58,7 +58,7 @@ char
           strlen("&left=") + strlen("&compact=") + strlen("&event=completed") + 100;
      char *url = malloc(url_length);
 
-#define NUMWANT 10000   
+#define NUMWANT 50   
      snprintf(url, url_length,
               "%s"
               "?info_hash=%s"

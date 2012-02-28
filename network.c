@@ -62,7 +62,7 @@ piece_complete(struct Peer *peer, struct Piece *piece, uint32_t index)
              scheduler will handle the rest. */
           syslog(LOG_WARNING, "Failed to verify piece: #%d", index);
           piece->state = Need;
-          heap_insert(&peer->torrent->pieces, *piece, &compare_priority);
+          heap_insert(peer->torrent->pieces, *piece, &compare_priority);
      }
      peer->pieces_requested--;
 }
@@ -91,13 +91,11 @@ handle_piece(struct Peer *p)
      if (off == 0)
           syslog(LOG_DEBUG, "PIECE: #%d from %s", index, inet_ntoa(p->addr.sin_addr));
 
-     if (p->torrent->is_single) 
-          memcpy(p->torrent->torrent_files.single.file.mmap + length, &p->message[9], REQUEST_LENGTH);
-     else 
-          ; /* TODO */
+     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+
      
 
-     struct Piece *piece = extract_by_index(&p->torrent->downloading, index, &compare_age);
+     struct Piece *piece = extract_by_index(p->torrent->downloading, index, &compare_age);
 
      /* sometimes a peer will send us a piece that we don't need */
      if (piece == NULL)
@@ -109,7 +107,7 @@ handle_piece(struct Peer *p)
           piece_complete(p, piece, index);
      } else
           /* put piece back in heap */
-          heap_insert(&p->torrent->downloading, *piece, &compare_age);
+          heap_insert(p->torrent->downloading, *piece, &compare_age);
 }
 
 void 
@@ -125,7 +123,7 @@ get_msg(struct bufferevent *bufev, struct Peer *p)
           memcpy(&off, &p->message[5], sizeof(off));
           index = ntohl(index);
           off = ntohl(off);
-          piece = find_by_index(&p->torrent->downloading, index);
+          piece = find_by_index(p->torrent->downloading, index);
 
           message_length = bufferevent_read(bufev, 
                                             &p->message[amount_read],
@@ -309,8 +307,8 @@ init_connection(struct Peer *p, uint8_t *handshake, struct event_base *base)
 void 
 init_connections(struct PeerNode *head, uint8_t *handshake, struct event_base *base)
 {
-     while (head != NULL) {
-          init_connection(head->cargo, handshake, base);
-          head = head->next;
-     }
+     struct PeerNode *current;
+
+     for (current = head; current != NULL; current = current->next)
+          init_connection(current->cargo, handshake, base);
 }

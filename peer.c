@@ -46,7 +46,7 @@ add_peer(struct PeerNode **head, struct Peer *peer)
      struct PeerNode *current;
      
      for (current = *head; current->next != NULL; current = current->next) {
-          if (current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr)
+          if (current->cargo != NULL && current->cargo->addr.sin_addr.s_addr == peer->addr.sin_addr.s_addr)
                return ;
      } 
      
@@ -76,18 +76,31 @@ add_peers(struct Torrent *t, struct PeerNode *peer_list)
 struct Peer
 *find_unchoked(struct PeerNode *list)
 {
-     struct PeerNode *head = list;
      struct Peer *out = NULL;
 
-     while (list != NULL) {
+     for ( ; list != NULL; list = list->next) {
           if (!list->cargo->tstate.peer_choking)
                out = list->cargo;
-          list = list->next;
      }
 
-     list = head;
-
      return out;
+}
+
+struct Peer
+*find_seed(struct PeerNode *list, uint64_t num_pieces)
+{
+     uint8_t seed_bitfield[num_pieces];
+     memset(seed_bitfield, 1, num_pieces);
+
+     struct PeerNode *head;
+     for (head = list; head != NULL; head = head->next) {
+          if (head->cargo->bitfield != NULL && memcmp(head->cargo->bitfield, seed_bitfield, num_pieces) == 0) {
+               syslog(LOG_DEBUG, "Found seed.");
+               return head->cargo;
+          }
+     }
+
+     return NULL;
 }
 
 void 
