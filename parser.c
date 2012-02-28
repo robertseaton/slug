@@ -51,6 +51,11 @@ struct BEncode
 
      assert(data[*position] == 'i');
      (*position)++;
+
+     /* discard leading zeroes */
+     while (data[*position] == '0')
+          (*position)++;
+
      while (isdigit(data[*position]))
           i = i * 10 + (data[(*position)++] - '0'); /* disgusting */
      assert(data[*position] == 'e');
