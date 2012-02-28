@@ -49,14 +49,12 @@ struct BEncode
 {
      int64_t i = 0;
 
-     /* I have wisely embedded side-effects in assert(), the mark of a master
-        programmer. Now if some poor soul disables asserts, they will completely
-        break the parser. This is the only place that this behavior is 
-        documented. */
-     assert(data[(*position)++] == 'i');
+     assert(data[*position] == 'i');
+     (*position)++;
      while (isdigit(data[*position]))
           i = i * 10 + (data[(*position)++] - '0'); /* disgusting */
-     assert(data[(*position)++] == 'e');
+     assert(data[*position] == 'e');
+     (*position)++;
 
      return initBInt(i);
 }
@@ -67,14 +65,16 @@ struct BEncode
     struct BListNode l;
     struct BListNode *pt = &l;
     
-    assert(data[(*position)++] == 'l');
+    assert(data[*position] == 'l');
+    (*position)++;
     while (data[*position] != 'e') {
          pt->next = malloc(sizeof(struct BListNode));
          pt = pt->next;
          pt->cargo = parseBEncode(data, position);
          pt->next = 0;
     }
-    assert(data[(*position)++] == 'e');
+    assert(data[*position] == 'e');
+    (*position)++;
         
     return initBList(l.next);
 }
@@ -87,7 +87,8 @@ struct BEncode
     while (isdigit(data[*position])) 
          l = l * 10 + (data[(*position)++] - '0');
 
-    assert(data[(*position)++] == ':');
+    assert(data[*position] == ':');
+    (*position)++;
 
     char *s = malloc(l + 1);
 
@@ -106,7 +107,8 @@ struct BEncode
      struct BDictNode d;
      struct BDictNode *pt = &d;
 
-     assert(data[(*position)++] == 'd');
+     assert(data[*position] == 'd');
+     (*position)++;
      while (data[*position] != 'e') {
           pt->next = malloc(sizeof(struct BDictNode));
           pt = pt->next;
@@ -117,7 +119,8 @@ struct BEncode
 
           free(s);
      }
-     assert(data[(*position)++] == 'e');
+     assert(data[*position] == 'e');
+     (*position)++;
 
      return initBDict(d.next);
 }
