@@ -63,7 +63,7 @@ char
               "%s"
               "?info_hash=%s"
               "&peer_id=%s"
-              "&port=%"PRIu64
+              "&port=%d"
               "&uploaded=%"PRIu64
               "&downloaded=%"PRIu64
               "&left=%"PRIu64

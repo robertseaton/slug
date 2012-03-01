@@ -253,7 +253,7 @@ struct TorrentFile
           *p = '/';
           files[i].length = get_length(next->cargo->cargo.bDict);
           if ((f = fopen(files[i].path, "w+")) == NULL)
-               perror('\0');
+               goto next;
           files[i].fd = fileno(fopen(files[i].path, "w+"));
           fseek(fdopen(files[i].fd, "w+"), files[i].length - 1, SEEK_SET);
           write(files[i].fd, "", 1);
@@ -262,6 +262,8 @@ struct TorrentFile
           if (addr == NULL)
                addr = files[i].mmap;
           addr += files[i].length;
+     next:
+          ;
      }
 
      return files;
