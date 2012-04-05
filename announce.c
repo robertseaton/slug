@@ -281,34 +281,71 @@ udp_tracker_connect(struct Tracker *t)
      return SUCCESS;
 }
 
-struct AnnounceRequest
+/* announce request format:
+ * int64_t connection_id
+ * int32_t action
+ * int32_t transaction_id
+ * uint8_t info_hash[20]
+ * char peer_id[20]
+ * uint64_t downloaded
+ * uint64_t left
+ * uint32_t event
+ * uint32_t ip
+ * uint32_t key
+ * uint32_t num_want
+ * uint16_t port
+ *
+ * Not a struct because compiler introduces padding. 
+ * * */
+char
 *udp_construct_announce(struct Torrent *t, int32_t action, int32_t event, int32_t ip, int32_t num_want)
 {
-     struct AnnounceRequest *ar = malloc(sizeof(struct AnnounceRequest));
+     char *out = malloc(98); /* size of announce request */
+     char *pt = out;
 
-     ar->connection_id = t->tracker->connection_id;
-     ar->action = htonl(action);
-     ar->transaction_id = htonl(rand());
-     memcpy(ar->peer_id, t->peer_id, 20);
-     memcpy(ar->info_hash, t->info_hash, 20);
-     ar->downloaded = htobe64(t->downloaded);
-     ar->uploaded = htobe64(t->uploaded);
-     ar->left = htobe64(t->left);
-     ar->key = 0;
-     ar->port = htons(t->port);
-     ar->event = htonl(event);
+     memcpy(pt, &t->tracker->connection_id, sizeof(t->tracker->connection_id));
+     pt += sizeof(t->tracker->connection_id);
+     action = htonl(action);
+     memcpy(pt, &action, sizeof(action));
+     pt += sizeof(action);
+     int32_t transaction_id = htonl(rand());
+     memcpy(pt, &transaction_id, sizeof(transaction_id));
+     pt += sizeof(transaction_id);
+     memcpy(pt, t->info_hash, 20);
+     pt += sizeof(t->info_hash);
+     memcpy(pt, t->peer_id, 20);
+     pt += sizeof(t->peer_id);
+     uint64_t downloaded = htobe64(t->downloaded);
+     memcpy(pt, &downloaded, sizeof(downloaded));
+     pt += sizeof(downloaded);
+     uint64_t left = htobe64(t->left);
+     memcpy(pt, &left, sizeof(left));
+     pt += sizeof(left);
+     uint64_t uploaded = htobe64(t->uploaded);
+     memcpy(pt, &uploaded, sizeof(uploaded));
+     pt += sizeof(uploaded);
+     event = htonl(event);
+     memcpy(pt, &event, sizeof(event));
+     pt += sizeof(event);
+     ip = htonl(ip);
+     memcpy(pt, &ip, sizeof(ip));
+     pt += sizeof(ip);
+     uint32_t key = 0;
+     memcpy(pt, &key, sizeof(key));
+     pt += sizeof(key);
 
-     if (ip == 0)
-          ar->ip = 0;
-     else
-          ar->ip = htonl(ip);
+     if (num_want == 0) {
+          num_want = htonl(DEFAULT_PEERS_WANTED);
+          memcpy(pt, &num_want, sizeof(num_want));
+     } else {
+          num_want = htonl(num_want);
+          memcpy(pt, &num_want, sizeof(num_want));
+     }
+     pt += sizeof(num_want);
+     uint16_t port = htons(t->port);
+     memcpy(pt, &port, sizeof(port));
 
-     if (num_want == 0)
-          ar->num_want = DEFAULT_PEERS_WANTED;
-     else
-          ar->num_want = htonl(num_want);
-
-     return ar;
+     return out;
 }
 
 void
@@ -338,11 +375,11 @@ udp_get_peers(int8_t* data, int length, struct Torrent* t)
 int
 udp_announce(struct Torrent *t)
 {
-     struct AnnounceRequest *ar = udp_construct_announce(t, ANNOUNCE, 0, 0, 0);
+     char *announce_request = udp_construct_announce(t, ANNOUNCE, 0, 0, 0);
      int8_t announce_response[4096];
      int amount_read;
 
-     if (udp_send_receive(t->tracker, ar, sizeof(announce_response), announce_response, 4096, &amount_read) != SUCCESS) {
+     if (udp_send_receive(t->tracker, announce_request, 98, announce_response, 4096, &amount_read) != SUCCESS) {
           syslog(LOG_WARNING, "Announce failure.");
           exit(EXIT_FAILURE);
      }
@@ -354,11 +391,6 @@ udp_announce(struct Torrent *t)
      memcpy(&interval, &announce_response[8], sizeof(interval));
      memcpy(&leechers, &announce_response[12], sizeof(leechers));
      memcpy(&seeders, &announce_response[16], sizeof(seeders));
-     
-     if (recv_action != ar->action || recv_transaction_id != ar->transaction_id) {
-          syslog(LOG_WARNING, "Announce failed.");
-          return ANNOUNCE_FAILURE;
-     }
      
      seeders = ntohl(seeders);
      leechers = ntohl(leechers);

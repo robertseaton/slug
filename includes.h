@@ -16,7 +16,7 @@
 #define TIMEOUT_INTERVAL    10
 #define OP_UNCHOKE_INTERVAL 30
 #define CALC_SPEED_INTERVAL 5
-#define TIMEOUT             35
+#define TIMEOUT             15
 #define REQUEST_LENGTH      16384
 #define PEER_PIPELINE_LEN   4
 #define MAX_ACTIVE_PEERS    4
@@ -189,14 +189,14 @@ void             update_bitfield           (uint8_t*, uint64_t*, uint8_t*);
 void             update_global_bitfield    (uint64_t, char*, uint64_t*);
 
 /* heap.c */
-int8_t           compare_priority          (struct Piece, struct Piece);
-int8_t           compare_age               (struct Piece, struct Piece);
+int              compare_priority          (struct Piece, struct Piece);
+int              compare_age               (struct Piece, struct Piece);
 void             heap_initialize           (struct MinBinaryHeap*, uint64_t);
-int8_t           heap_insert               (struct MinBinaryHeap*, struct Piece, int8_t (*)(struct Piece, struct Piece));
+int              heap_insert               (struct MinBinaryHeap*, struct Piece, int (*)(struct Piece, struct Piece));
 struct Piece    *find_by_index             (struct MinBinaryHeap*, uint64_t);
 struct Piece    *heap_min                  (struct MinBinaryHeap*);
-struct Piece    *heap_extract_min          (struct MinBinaryHeap*, int8_t (*)(struct Piece, struct Piece));
-struct Piece    *extract_by_index          (struct MinBinaryHeap*, uint64_t, int8_t (*)(struct Piece, struct Piece));
+struct Piece    *heap_extract_min          (struct MinBinaryHeap*, int (*)(struct Piece, struct Piece));
+struct Piece    *extract_by_index          (struct MinBinaryHeap*, uint64_t, int (*)(struct Piece, struct Piece));
 
 /* list.c */
 struct Peer     *extract_element           (struct PeerNode*, struct Peer*);
@@ -224,16 +224,16 @@ void             interested                (struct Peer*);
 void             not_interested            (struct Peer*);
 void             request                   (struct Peer*, struct Piece*, off_t);
 void             have                      (struct Piece*, struct Torrent*);
-int8_t           has_needed_piece          (uint8_t*, char*, uint64_t);
+int              has_needed_piece          (uint8_t*, char*, uint64_t);
 uint64_t         num_peers                 (struct PeerNode*);
 
 /* piece.c */
 void             init_piece                (struct Piece*, uint64_t);
 void             free_pieces               (struct Piece*, uint64_t);
 void             download_piece            (struct Piece*, struct Peer*);
-uint8_t          verify_piece              (void*, uint64_t, uint8_t*);
-uint8_t          has_piece                 (struct Piece*, struct Peer*);
-uint64_t         pieces_remaining          (char*, uint64_t);
+int              verify_piece              (void*, uint64_t, uint8_t*);
+int              has_piece                 (struct Piece*, struct Peer*);
+int              pieces_remaining          (char*, uint64_t);
 void             print_pieces_remaining    (char*, uint64_t);
 
 /* scheduler.c */
@@ -254,5 +254,5 @@ void             error                     (char*);
 struct BEncode  *find_value                (char*, struct BDictNode*);
 void             freeBEncode               (struct BEncode*);
 void             print_sha1                (uint8_t*);
-int              mkpath                    (char*, mode_t);
+int              mkpath                    (const char*, mode_t);
 #endif

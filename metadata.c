@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "includes.h"
 
@@ -79,7 +80,7 @@ get_pieces(struct MinBinaryHeap *pieces, uint64_t *num_pieces, char *data)
 }
 
 /* Takes a BEncoded metadata dictionary and returns 1 if private, 0 otherwise. */
-uint8_t
+int
 is_private(struct BDictNode *b)
 {
      struct BEncode *output_value;
@@ -181,7 +182,7 @@ char
 }
 
 /* Checks if a torrent is a single file torrent. */
-uint8_t
+int
 is_single_file_torrent(char *data)
 {
      /* only multi-file metadata dictionaries contain the files key */
@@ -242,7 +243,6 @@ struct TorrentFile
      files = malloc(sizeof(struct TorrentFile) * num_files);
 
      int i;
-     void *addr = NULL;
      FILE *f;
      char *p;
      for (i = 0, next = value->cargo.bList; next != NULL; next = next->next, i++) {
@@ -257,11 +257,13 @@ struct TorrentFile
           files[i].fd = fileno(fopen(files[i].path, "w+"));
           fseek(fdopen(files[i].fd, "w+"), files[i].length - 1, SEEK_SET);
           write(files[i].fd, "", 1);
-          files[i].mmap = mmap(0, files[i].length, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, 
-                               files[i].fd, 0);
-          if (addr == NULL)
-               addr = files[i].mmap;
-          addr += files[i].length;
+          files[i].mmap = mmap(NULL, files[i].length, PROT_READ | PROT_WRITE, MAP_SHARED, files[i].fd, 0);
+
+          if (files[i].mmap == MAP_FAILED) {
+               syslog(LOG_ERR, "mmap: %s", strerror(errno));
+               exit(1);
+          }
+
      next:
           ;
      }
@@ -323,7 +325,7 @@ struct Torrent
                f->mmap = mmap(0, t.length, PROT_READ | PROT_WRITE, MAP_SHARED, 
                               f->fd, 0);
                t.mmap = f->mmap;
-          } else {
+          }  else {
                t.torrent_files.multi.files = init_files(output_value->cargo.bDict, t.name);
                t.mmap = t.torrent_files.multi.files[0].mmap;
           }

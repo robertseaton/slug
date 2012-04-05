@@ -5,14 +5,11 @@
 #include "includes.h"
 
 /* Parses a bitfield message into a bitfield data structure. */
-uint8_t 
+uint8_t
 *init_bitfield(uint64_t num_pieces, uint8_t *message)
 {
-     /* never malloc 0 */
-     if (num_pieces == 0)
-          error("Failed to initialize peer's bitfield.");
-
      uint8_t *bitfield;
+     assert(num_pieces != 0);
      bitfield = malloc(num_pieces);
 
      uint32_t i, j;
@@ -31,10 +28,7 @@ uint8_t
 uint64_t
 *init_global_bitfield(uint64_t num_pieces)
 {
-     /* never malloc 0 */
-     if (num_pieces == 0)
-          error("Failed to initialize global bitfield.");
-
+     assert(num_pieces != 0);
      uint64_t *bitfield = malloc(sizeof(uint64_t) * num_pieces);
 
      uint64_t i;
@@ -48,11 +42,7 @@ uint64_t
 char
 *init_have_bitfield(uint64_t num_pieces)
 {
-
-     /* never malloc 0 */
-     if (num_pieces == 0)
-          error("Failed to initalize have bitfield.");
-
+     assert(num_pieces != 0);
      char *bitfield = malloc(num_pieces);
      
      uint64_t i;

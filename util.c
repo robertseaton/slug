@@ -108,38 +108,38 @@ print_sha1(uint8_t *sha1)
 }
 
 int
-mkpath(char *s, mode_t mode)
+mkpath(const char *s, mode_t mode)
 {
-        char *r = NULL, *path = NULL, *up = NULL;
-        int rv;
+     char *r, *path, *up;
+     int rv;
 
-        rv = -1;
-        if (strcmp(s, ".") == 0 || strcmp(s, "/") == 0)
-                return 0;
+     rv = -1;
+     if (strcmp(s, ".") == 0 || strcmp(s, "/") == 0)
+          return 0;
 
-        if ((path = strdup(s)) == NULL)
+     if ((path = strdup(s)) == NULL)
                 exit(EXIT_FAILURE);
 
-        if ((r = dirname(s)) == NULL)
+     if ((r = dirname(strdup(s))) == NULL)
                 goto out;
         
-        if ((up = strdup(r)) == NULL)
+     if ((up = strdup(r)) == NULL)
                 exit(EXIT_FAILURE);
 
-        if ((mkpath(up, mode) == -1) && (errno != EEXIST))
+     if ((mkpath(up, mode) == -1) && (errno != EEXIST))
                 goto out;
 
-        if ((mkdir(path, mode) == -1) && (errno != EEXIST))
+     if ((mkdir(path, mode) == -1) && (errno != EEXIST))
                 rv = -1;
-        else
-                rv = 0;
+     else
+          rv = 0;
 
 out:
-        if (up != NULL)
-                free(up);
-        free(path);
+     if (up != NULL)
+          free(up);
+     free(path);
 
-        return rv;
+     return rv;
 }
 
 #ifdef DEBUG

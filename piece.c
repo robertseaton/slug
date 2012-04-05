@@ -26,15 +26,22 @@ download_piece(struct Piece *piece, struct Peer *peer)
      piece->downloading_from = peer;
      peer->pieces_requested++;
      heap_insert(peer->torrent->downloading, *piece, &compare_age);
+    
+     /* The final piece may be truncated, so we HANDLE IT. */
+     int how_much;
+     //if (piece->index == peer->torrent->num_pieces - 1)
+     // how_much = peer->torrent->length % peer->torrent->piece_length;
+     //else
+     how_much = peer->torrent->piece_length;
 
-     while (peer->torrent->piece_length - piece->amount_requested > 0) {
+     while (how_much - (int)piece->amount_requested > 0) {
           request(peer, piece, offset);
           offset += REQUEST_LENGTH;
           piece->amount_requested += REQUEST_LENGTH;
      }
 }
 
-uint8_t 
+int 
 verify_piece(void *addr, uint64_t piece_length, uint8_t *piece_sha)
 {
      SHA_CTX sha;
@@ -54,7 +61,7 @@ verify_piece(void *addr, uint64_t piece_length, uint8_t *piece_sha)
           return 1;
 }
 
-uint8_t 
+int 
 has_piece(struct Piece *piece, struct Peer *peer)
 {
      if (peer->bitfield == NULL)
@@ -63,7 +70,7 @@ has_piece(struct Piece *piece, struct Peer *peer)
      return peer->bitfield[piece->index];
 }
 
-uint64_t 
+int 
 pieces_remaining(char *have_bitfield, uint64_t num_pieces)
 {
      uint64_t num_remain = 0;

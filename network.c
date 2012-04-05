@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <event2/bufferevent.h>
+#include <event2/buffer.h>
 #include <event2/event.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -31,40 +32,120 @@ handle_request(struct Peer *p)
      return ;
 }
 
+int
+which_file(struct Peer *p, uint64_t off, uint64_t *begin)
+{
+     int end;
+
+     *begin = 0;
+
+     int i;
+     for (i = 0, end = 0; end < off; i++) {
+          *begin = end;
+          end += p->torrent->torrent_files.multi.files[i].length;
+     }
+     
+     if (i == 0) {
+          *begin = 0;
+          return i;
+     }
+
+     return i - 1;
+}
+
+int
+spans_files(uint64_t file_length, uint64_t block_off, uint64_t blocksz)
+{
+     if (file_length < block_off + blocksz)
+          return 1;
+     else
+          return 0;
+}
+
 void
 piece_complete(struct Peer *peer, struct Piece *piece, uint32_t index)
 {
      void *addr;
      uint8_t *sha1 = piece->sha1;
+     struct TorrentFile* files = peer->torrent->torrent_files.multi.files;
+     uint64_t piece_length = peer->torrent->piece_length;
+     uint64_t length = index * piece_length;
 
      if (peer->torrent->is_single)
-          addr = peer->torrent->torrent_files.single.file.mmap + index * peer->torrent->piece_length;
-     else
-          ; /* TODO */
+          addr = peer->torrent->torrent_files.single.file.mmap + length;
+     else {
+          uint64_t begin, off;
+          int i = which_file(peer, length, &begin);
+
+          addr = malloc(peer->torrent->piece_length);
+          off = length - begin;
+
+          if (spans_files(files[i].length, off, piece_length)) {
+               int read;
+               for (read = 0; read < piece_length; i++) {
+                    int nbytes = files[i].length - off;
+
+                    if (read + nbytes > piece_length)
+                         nbytes = piece_length - read;
+
+                    memcpy(addr + read, files[i].mmap + off, nbytes);
+                    read += nbytes;
+                    off = 0;
+               }
+          } else
+               memcpy(addr, files[i].mmap + off, piece_length);
+     }
+          
 
      if (verify_piece(addr, peer->torrent->piece_length, sha1)) {
           syslog(LOG_DEBUG, "Successfully downloaded piece: #%d of %"PRIu64"", index, peer->torrent->num_pieces);
           have(piece, peer->torrent);
-
-               /*
-               if (peer->tstate.peer_choking) {
-                    uint64_t i;
-                    for (i = 0; i < MAX_ACTIVE_PEERS; i++)
-                         if (peer->torrent->active_peers[i] == p) {
-                              peer->torrent->active_peers[i] = NULL;
-                              insert_head(&peer->torrent->peer_list, p);
-                         }
-                         } */
      } else {
           /* If we failed to verify the piece, we have to assume the whole thing
              is bad and re-download the entire piece. To accomplish this, we 
              reset the piece's state and add the piece back to the heap, the 
              scheduler will handle the rest. */
+#ifdef DEBUG
+          FILE *debug = fopen("failed.piece", "w+");
+          fwrite(addr, piece_length, 1, debug);
+          fclose(debug);
+#endif
+          
           syslog(LOG_WARNING, "Failed to verify piece: #%d", index);
           piece->state = Need;
           heap_insert(peer->torrent->pieces, *piece, &compare_priority);
      }
+
+     if (!peer->torrent->is_single)
+          free(addr);
+
      peer->pieces_requested--;
+}
+
+void
+wblock(struct Peer *p, uint64_t off)
+{
+     uint64_t begin;
+     struct TorrentFile* files = p->torrent->torrent_files.multi.files;
+     int i = which_file(p, off, &begin);
+
+     off -= begin;
+     assert(files[i].length > off);
+     
+     if (spans_files(files[i].length, off, REQUEST_LENGTH)) {
+          int written;
+          for (written = 0; written < REQUEST_LENGTH; i++) {
+               int nbytes = files[i].length - off;
+
+               if (written + nbytes > REQUEST_LENGTH)
+                    nbytes = REQUEST_LENGTH - written;
+
+               memcpy(files[i].mmap + off, &p->message[9 + written], nbytes);
+               written += nbytes;
+               off = 0;
+          }
+     } else
+          memcpy(files[i].mmap + off, &p->message[9], REQUEST_LENGTH);
 }
 
 void 
@@ -72,7 +153,8 @@ handle_piece(struct Peer *p)
 {
      uint32_t index, off;
      uint64_t length;
-
+     static char addr2[262144];
+     
     /* The piece message takes the form: <prefix><index><offset><block>
        <prefix> is handled by other code
        <index> is the piece's index, four bytes, big endian
@@ -81,7 +163,7 @@ handle_piece(struct Peer *p)
        <block> is actual torrent data, a subset of the piece */
      memcpy(&index, &p->message[1], sizeof(index));
      memcpy(&off, &p->message[5], sizeof(off));
-     
+
      index = ntohl(index);
      off = ntohl(off);
      /* The block's offset within the file: */
@@ -91,7 +173,12 @@ handle_piece(struct Peer *p)
      if (off == 0)
           syslog(LOG_DEBUG, "PIECE: #%d from %s", index, inet_ntoa(p->addr.sin_addr));
 
-     memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+     if (p->torrent->is_single)
+          memcpy(p->torrent->mmap + length, &p->message[9], REQUEST_LENGTH);
+     else {
+          memcpy(addr2 + off, &p->message[9], REQUEST_LENGTH);
+          wblock(p, length);
+     }
 
      
 
@@ -103,7 +190,13 @@ handle_piece(struct Peer *p)
 
      piece->amount_downloaded += REQUEST_LENGTH;
 
-     if (piece->amount_downloaded >= p->torrent->piece_length) {
+     int how_much;
+     //if (index == p->torrent->num_pieces - 1)
+     //how_much = p->torrent->length % p->torrent->piece_length;
+     //else
+     how_much = p->torrent->piece_length;
+
+     if (piece->amount_downloaded >= how_much) {
           piece_complete(p, piece, index);
      } else
           /* put piece back in heap */
@@ -125,13 +218,9 @@ get_msg(struct bufferevent *bufev, struct Peer *p)
           off = ntohl(off);
           piece = find_by_index(p->torrent->downloading, index);
 
-          message_length = bufferevent_read(bufev, 
-                                            &p->message[amount_read],
-                                            p->amount_pending);
+          message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
      } else
-          message_length = bufferevent_read(bufev, 
-                                            &p->message[amount_read],
-                                            p->amount_pending);
+          message_length = bufferevent_read(bufev, &p->message[amount_read], p->amount_pending);
 
      /* possible bufferevent_read found nothing */
      if (message_length < 0)
@@ -147,19 +236,17 @@ get_msg(struct bufferevent *bufev, struct Peer *p)
 
 }
 
-void 
+void
 read_prefix(struct bufferevent *bufev, struct Peer *p)
 {
+#define PREFIX_LEN 4
      if (p->message != NULL)
           free(p->message); /* free old message */
 
-#define PREFIX_LEN 4
      p->amount_pending = PREFIX_LEN;
      p->message_length = PREFIX_LEN;
      p->message = malloc(sizeof(uint8_t) * PREFIX_LEN);
-     int64_t message_length = bufferevent_read(bufev, 
-                                               &p->message_length,
-                                               p->amount_pending);
+     int64_t message_length = bufferevent_read(bufev, &p->message_length, p->amount_pending);
 
      /* possible bufferevent_read found nothing */
      if (message_length < 0)
@@ -167,9 +254,6 @@ read_prefix(struct bufferevent *bufev, struct Peer *p)
 
      p->amount_pending = p->amount_pending - message_length;
 
-     /* It's possible that bufferevent_read will only return a partial prefix,
-        but it's very rare, at least on a decent connection. It's almost 
-        certainly a bug that we don't handle this. FIXME */
      assert(p->amount_pending <= 0);
 }
 
@@ -222,9 +306,7 @@ parse_msg(struct Peer *p)
                break;
      case 5: /* have message */
           if (p->message[0] == 4) {
-               update_bitfield(p->message, 
-                               p->torrent->global_bitfield, 
-                               p->bitfield);
+               update_bitfield(p->message, p->torrent->global_bitfield, p->bitfield);
                return ;
           } else
                break;
@@ -244,14 +326,14 @@ parse_msg(struct Peer *p)
      case PIECE_PREFIX: /* piece message */
           if (p->message[0] == 7) {
                handle_piece(p);
-               return;
+               return ;
           } else
                break;
      default:
-          if (p->message_length == (int)(p->torrent->num_pieces / 8.0 + 1.9)) { /* full bitfield */
+          if (p->message_length == (int)(p->torrent->num_pieces / 8.0 + 1.5)) { /* full bitfield */
                syslog(LOG_DEBUG, "BITFIELD: %s", inet_ntoa(p->addr.sin_addr));
-               p->bitfield = init_bitfield(p->torrent->num_pieces,
-                                           p->message);
+               p->bitfield = init_bitfield(p->torrent->num_pieces, p->message);
+
 
                return ;
           } else
@@ -263,19 +345,27 @@ void
 handle_peer_response(struct bufferevent *bufev, void *payload)
 {
      struct Peer *p = payload;
+     struct evbuffer *ev = bufferevent_get_input(bufev);
+     int sz;
      
-     if (p->state == Handshaking) {
-          p->message = malloc(sizeof(uint8_t) * p->message_length);
-          get_msg(bufev, p);
-     } else if (p->state == HavePartialMessage)
-          get_msg(bufev, p);
-     else if (p->state == Connected) {
-          read_prefix(bufev, p);
-          get_prefix(bufev, p);
-     } 
+     while ((sz = evbuffer_get_length(ev)) > 0) {
+          if (p->state == Dead) {
+               return ;
+          } else if (p->state == Handshaking) {
+               p->message = malloc(sizeof(uint8_t) * p->message_length);
+               get_msg(bufev, p);
+          } else if (p->state == HavePartialMessage) {
+               get_msg(bufev, p);
+          } else if (p->state == Connected) {
+               if (sz < PREFIX_LEN)
+                    break;
+               read_prefix(bufev, p);
+               get_prefix(bufev, p);
+          }
 
-     if (p->state == HaveMessage)
-          parse_msg(p);
+          if (p->state == HaveMessage)
+               parse_msg(p);
+     }
 }
 
 void 
@@ -286,12 +376,8 @@ init_connection(struct Peer *p, uint8_t *handshake, struct event_base *base)
 
      p->connectionfd = socket(AF_INET, SOCK_STREAM, 0);
      fcntl(p->connectionfd, F_SETFL, O_NONBLOCK);
-     p->bufev = bufferevent_socket_new(base, 
-                                       p->connectionfd,
-                                       BEV_OPT_CLOSE_ON_FREE);
-     bufferevent_socket_connect(p->bufev, 
-                                (struct sockaddr *) &p->addr,
-                                sizeof(p->addr));
+     p->bufev = bufferevent_socket_new(base, p->connectionfd, BEV_OPT_CLOSE_ON_FREE);
+     bufferevent_socket_connect(p->bufev, (struct sockaddr *) &p->addr, sizeof(p->addr));
      syslog(LOG_DEBUG, "CONNECTED: %s\n", inet_ntoa(p->addr.sin_addr));
      bufferevent_setcb(p->bufev, handle_peer_response, NULL, NULL, p);
      bufferevent_enable(p->bufev, EV_READ);

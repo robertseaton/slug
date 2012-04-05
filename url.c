@@ -5,13 +5,7 @@
 
 #include "includes.h"
 
-static char 
-from_hex(char c)
-{
-     return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
-}
-
-static char 
+char 
 to_hex(char h)
 {
      static char hex[] = "0123456789abcdef";

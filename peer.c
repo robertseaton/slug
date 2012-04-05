@@ -79,7 +79,7 @@ struct Peer
      struct Peer *out = NULL;
 
      for ( ; list != NULL; list = list->next) {
-          if (!list->cargo->tstate.peer_choking)
+          if (!list->cargo->tstate.peer_choking && list->cargo->tstate.interested && list->cargo->state != Dead)
                out = list->cargo;
      }
 
@@ -186,7 +186,7 @@ have(struct Piece *piece, struct Torrent *t)
 #endif
 }
 
-int8_t 
+int
 has_needed_piece(uint8_t *peer_bitfield, char *host_bitfield, uint64_t num_pieces)
 {
      /* possible the bitfield hasn't been initialized yet */

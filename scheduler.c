@@ -22,8 +22,8 @@ queue_pieces(struct Torrent *t, struct Peer *peer)
 
      heap_initialize(tmp, t->num_pieces);
 
-     while (peer->pieces_requested <= PEER_PIPELINE_LEN) {
-               piece = heap_extract_min(t->pieces, compare_priority);
+     while (peer->pieces_requested < PEER_PIPELINE_LEN) {
+               piece = heap_extract_min(t->pieces, &compare_priority);
                if (piece != NULL && peer->bitfield[piece->index])
                     download_piece(piece, peer);
                else if (piece != NULL) {
@@ -33,7 +33,7 @@ queue_pieces(struct Torrent *t, struct Peer *peer)
      }
      
      /* move pieces from tmp heap back into t->pieces */
-     piece = heap_extract_min(tmp, compare_priority);
+     piece = heap_extract_min(tmp, &compare_priority);
      while (piece != NULL) {
           heap_insert(t->pieces, *piece, &compare_priority);
           piece = heap_extract_min(tmp, &compare_priority);
@@ -55,11 +55,11 @@ in_queue(struct Peer **queue, struct Peer *cargo)
 static void
 swap_peers(struct Peer *x, struct Peer *y)
 {
-     struct Peer *z;
+     struct Peer z;
 
-     z = x;
-     x = y;
-     y = z;
+     z = *x;
+     *x = *y;
+     *y = z;
 }
 
 /* helper function for __optimistic_unchoke, finds the first peer that
@@ -85,17 +85,19 @@ find_unused_peer(struct PeerNode *list)
 int 
 compare_speed(const void *p, const void *q)
 {
-     struct Peer *x = p;
-     struct Peer *y = q;
+     struct Peer **x = p;
+     struct Peer **y = q;
 
-     if (x == NULL)
-          return -1;
-     else if (y == NULL)
+     if (*x == NULL && *y == NULL)
+          return 0;
+     else if (*x == NULL)
           return 1;
-     else if (x > y)
-          return 1;
-     else if (x < y)
+     else if (*y == NULL)
           return -1;
+     else if ((*x)->speed > (*y)->speed)
+          return -1;
+     else if ((*x)->speed < (*y)->speed)
+          return 1;
  
           return 0;
 }
@@ -130,10 +132,9 @@ __optimistic_unchoke(evutil_socket_t fd, short what, void *arg)
 void
 calculate_speed(struct Peer *p)
 {
-     if (p->amount_downloaded) {
-          p->speed = p->amount_downloaded / CALC_SPEED_INTERVAL;
-          p->amount_downloaded = 0;
-     }
+     
+     p->speed = p->amount_downloaded / CALC_SPEED_INTERVAL;
+     p->amount_downloaded = 0;
 }
 
 void 
@@ -143,12 +144,26 @@ __calculate_speed(evutil_socket_t fd, short what, void *arg)
 
      uint64_t i;
      for (i = 0; i < MAX_ACTIVE_PEERS; i++) {
-          if (t->active_peers[i] != NULL)
+          if (t->active_peers[i] != NULL && t->active_peers[i]->pieces_requested != 0)
                calculate_speed(t->active_peers[i]);
      }
 
-     if (t->optimistic_unchoke != NULL)
-          calculate_speed(t->optimistic_unchoke);
+     // if (t->optimistic_unchoke != NULL)
+     // calculate_speed(t->optimistic_unchoke);
+}
+
+void print_queue(struct Peer **q)
+{
+     printf("QUEUE\n");
+     int i;
+     for (i = 0; i < MAX_ACTIVE_PEERS; i++) {
+          if (q[i] != NULL) {
+               printf("peer: %s\n", inet_ntoa(q[i]->addr.sin_addr));
+               printf("speed: %ld\n", q[i]->speed);
+               printf("amount requested: %d\n\n", q[i]->pieces_requested);
+          } else
+               printf("peer: NULL\n\n");
+     }
 }
 
 void 
@@ -161,20 +176,22 @@ __schedule(evutil_socket_t fd, short what, void *arg)
       * connections
       * * */
 
-     uint64_t i;
+     qsort(&t->active_peers[0], MAX_ACTIVE_PEERS, sizeof(struct Peer *), &compare_speed);
+
+     int i;
      for (i = 0; i < MAX_ACTIVE_PEERS; i++) {
           if (t->active_peers[i] == NULL)
                t->active_peers[i] = extract_element(t->peer_list, find_unchoked(t->peer_list));
 
-          if (t->active_peers[i] == NULL)
-               t->active_peers[i] = extract_element(t->peer_list, find_seed(t->peer_list, t->num_pieces));
-
           /* still possible it's null */
-          if (t->active_peers[i] != NULL)
+          if (t->active_peers[i] != NULL) 
                queue_pieces(t, t->active_peers[i]);
      }
-         
-     queue_pieces(t, t->optimistic_unchoke);
+
+          // queue_pieces(t, t->optimistic_unchoke);
+#ifdef DEBUG
+     //print_queue(t->active_peers);
+#endif
 }
 
 void 
@@ -186,10 +203,10 @@ schedule(struct Torrent *t, struct event_base *base)
      struct timeval calc_speed_interval = {CALC_SPEED_INTERVAL, 0};
      
      schedule_ev = event_new(base, -1, EV_PERSIST, __schedule, t);
-     op_unchoke_ev = event_new(base, -1, EV_PERSIST, __optimistic_unchoke, t);
+     // op_unchoke_ev = event_new(base, -1, EV_PERSIST, __optimistic_unchoke, t);
      calc_speed_ev = event_new(base, -1, EV_PERSIST, __calculate_speed, t);
      evtimer_add(schedule_ev, &schedule_interval);
-     evtimer_add(op_unchoke_ev, &op_unchoke_interval);
+     // evtimer_add(op_unchoke_ev, &op_unchoke_interval);
      evtimer_add(calc_speed_ev, &calc_speed_interval);
 }
 
@@ -203,11 +220,11 @@ __timeout(evutil_socket_t fd, short what, void *arg)
      struct Torrent *t = arg;
      struct Piece *p = heap_min(t->downloading);
 
+     p = heap_min(t->downloading);
      while (p != NULL && time(NULL) - p->started > TIMEOUT) {
           p = heap_extract_min(t->downloading, &compare_age);
           syslog(LOG_DEBUG, "TIMEOUT: Piece #%"PRIu64" from %s.\n", 
-                 p->index, 
-                 inet_ntoa(p->downloading_from->addr.sin_addr));
+                 p->index, inet_ntoa(p->downloading_from->addr.sin_addr));
           p->downloading_from->state = Dead;
           p->amount_downloaded = 0;
           

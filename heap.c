@@ -13,16 +13,16 @@
 #define PARENT(x) (x / 2)
 
 void 
-swap(struct Piece x, struct Piece y)
+swap(struct Piece *x, struct Piece *y)
 {
      struct Piece tmp;
 
-     tmp = x;
-     x = y;
-     y = tmp;
+     memcpy(&tmp, x, sizeof(struct Piece));
+     memcpy(x, y, sizeof(struct Piece));
+     memcpy(y, &tmp, sizeof(struct Piece));
 }
 
-int8_t 
+int
 compare_priority(struct Piece x, struct Piece y)
 {
      if (x.priority < y.priority)
@@ -31,7 +31,7 @@ compare_priority(struct Piece x, struct Piece y)
           return 0;
 }
 
-int8_t
+int
 compare_age(struct Piece x, struct Piece y)
 {
      if (x.started < y.started)
@@ -42,24 +42,24 @@ compare_age(struct Piece x, struct Piece y)
 
 /* pq = priority queue */
 void 
-heapify(struct MinBinaryHeap* pq, uint64_t i, int8_t (*compare)(struct Piece, struct Piece))
+heapify(struct MinBinaryHeap* pq, uint64_t i, int (*compare)(struct Piece, struct Piece))
 {
      uint64_t minimum;
      uint64_t l = LEFT(i);
      uint64_t r = RIGHT(i);
      
      /* check left child node */
-     if (compare(pq->elements[l], pq->elements[i]))
+     if (l < pq->heap_size && compare(pq->elements[l], pq->elements[i]))
           minimum = l;
      else
           minimum = i;
 
      /* check right child node */
-     if (compare(pq->elements[r], pq->elements[minimum]))
+     if (r < pq->heap_size && compare(pq->elements[r], pq->elements[minimum]))
           minimum = r;
 
      if (minimum != i) {
-          swap(pq->elements[i], pq->elements[minimum]);
+          swap(&pq->elements[i], &pq->elements[minimum]);
           heapify(pq, minimum, compare);
      }     
 }
@@ -74,7 +74,7 @@ struct Piece
 }
 
 struct Piece
-*heap_extract_min(struct MinBinaryHeap *pq, int8_t (*compare)(struct Piece, struct Piece))
+*heap_extract_min(struct MinBinaryHeap *pq, int (*compare)(struct Piece, struct Piece))
 {
      struct Piece *min = malloc(sizeof(struct Piece));
      
@@ -90,8 +90,8 @@ struct Piece
      return min;
 }
 
-int8_t 
-heap_insert(struct MinBinaryHeap *pq, struct Piece key, int8_t (*compare)(struct Piece, struct Piece))
+int
+heap_insert(struct MinBinaryHeap *pq, struct Piece key, int (*compare)(struct Piece, struct Piece))
 {
      uint64_t i;
      
@@ -109,8 +109,8 @@ heap_insert(struct MinBinaryHeap *pq, struct Piece key, int8_t (*compare)(struct
      return 0;
 }
 
-int8_t 
-heap_delete(struct MinBinaryHeap *pq, uint64_t i, int8_t (*compare)(struct Piece, struct Piece))
+int 
+heap_delete(struct MinBinaryHeap *pq, uint64_t i, int (*compare)(struct Piece, struct Piece))
 {
      if (i < pq->heap_size || i < 1)
           return -1;
@@ -142,7 +142,7 @@ struct Piece
 }
 
 struct Piece 
-*extract_by_index (struct MinBinaryHeap *pq, uint64_t index, int8_t (*compare)(struct Piece, struct Piece))
+*extract_by_index (struct MinBinaryHeap *pq, uint64_t index, int (*compare)(struct Piece, struct Piece))
 {
      struct Piece *out = malloc(sizeof(struct Piece));
 
