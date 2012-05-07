@@ -148,8 +148,8 @@ __calculate_speed(evutil_socket_t fd, short what, void *arg)
                calculate_speed(t->active_peers[i]);
      }
 
-     // if (t->optimistic_unchoke != NULL)
-     // calculate_speed(t->optimistic_unchoke);
+     if (t->optimistic_unchoke != NULL)
+          calculate_speed(t->optimistic_unchoke);
 }
 
 void print_queue(struct Peer **q)
@@ -161,6 +161,8 @@ void print_queue(struct Peer **q)
                printf("peer: %s\n", inet_ntoa(q[i]->addr.sin_addr));
                printf("speed: %ld\n", q[i]->speed);
                printf("amount requested: %d\n\n", q[i]->pieces_requested);
+               if (q[i]->tstate.interested == 0)
+                    printf("not interested\n");
           } else
                printf("peer: NULL\n\n");
      }
@@ -180,6 +182,9 @@ __schedule(evutil_socket_t fd, short what, void *arg)
 
      int i;
      for (i = 0; i < MAX_ACTIVE_PEERS; i++) {
+          if (t->active_peers[i] != NULL && !has_needed_piece(t->active_peers[i]->bitfield, t->have_bitfield, t->num_pieces))
+              t->active_peers[i] = NULL;
+
           if (t->active_peers[i] == NULL)
                t->active_peers[i] = extract_element(t->peer_list, find_unchoked(t->peer_list));
 
@@ -188,9 +193,9 @@ __schedule(evutil_socket_t fd, short what, void *arg)
                queue_pieces(t, t->active_peers[i]);
      }
 
-          // queue_pieces(t, t->optimistic_unchoke);
+          queue_pieces(t, t->optimistic_unchoke);
 #ifdef DEBUG
-     //print_queue(t->active_peers);
+     print_queue(t->active_peers);
 #endif
 }
 
@@ -203,10 +208,10 @@ schedule(struct Torrent *t, struct event_base *base)
      struct timeval calc_speed_interval = {CALC_SPEED_INTERVAL, 0};
      
      schedule_ev = event_new(base, -1, EV_PERSIST, __schedule, t);
-     // op_unchoke_ev = event_new(base, -1, EV_PERSIST, __optimistic_unchoke, t);
+     op_unchoke_ev = event_new(base, -1, EV_PERSIST, __optimistic_unchoke, t);
      calc_speed_ev = event_new(base, -1, EV_PERSIST, __calculate_speed, t);
      evtimer_add(schedule_ev, &schedule_interval);
-     // evtimer_add(op_unchoke_ev, &op_unchoke_interval);
+     evtimer_add(op_unchoke_ev, &op_unchoke_interval);
      evtimer_add(calc_speed_ev, &calc_speed_interval);
 }
 

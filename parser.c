@@ -45,9 +45,9 @@ struct BEncode
 }
 
 struct BEncode
-*parseBInt(char *data, int64_t *position)
+*parseBInt(char *data, int *position)
 {
-     int64_t i = 0;
+     int i = 0;
 
      assert(data[*position] == 'i');
      (*position)++;
@@ -57,7 +57,7 @@ struct BEncode
           (*position)++;
 
      while (isdigit(data[*position]))
-          i = i * 10 + (data[(*position)++] - '0'); /* disgusting */
+          i = i * 10 + (data[(*position)++] - '0');
      assert(data[*position] == 'e');
      (*position)++;
 
@@ -65,7 +65,7 @@ struct BEncode
 }
 
 struct BEncode 
-*parseBList(char *data, int64_t *position)
+*parseBList(char *data, int *position)
 {
     struct BListNode l;
     struct BListNode *pt = &l;
@@ -85,7 +85,7 @@ struct BEncode
 }
 
 struct BEncode
-*parseBString(char *data, int64_t *position)
+*parseBString(char *data, int *position)
 {
     int64_t l = 0;
     
@@ -101,13 +101,13 @@ struct BEncode
     for (i = 0; i < l; i++)
          s[i] = data[(*position)++];
 
-    s[l] = 0;
+    s[l] = '\0';
 
     return initBString(s);
 }
 
 struct BEncode
-*parseBDict(char *data, int64_t *position)
+*parseBDict(char *data, int *position)
 {
      struct BDictNode d;
      struct BDictNode *pt = &d;
@@ -131,7 +131,7 @@ struct BEncode
 }
 
 struct BEncode 
-*parseBEncode(char *data, int64_t *position)
+*parseBEncode(char *data, int *position)
 {
      switch (data[*position]) {
      case 'd':

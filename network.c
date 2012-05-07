@@ -169,7 +169,6 @@ handle_piece(struct Peer *p)
      /* The block's offset within the file: */
      length = index * p->torrent->piece_length + off;
 
-
      if (off == 0)
           syslog(LOG_DEBUG, "PIECE: #%d from %s", index, inet_ntoa(p->addr.sin_addr));
 
